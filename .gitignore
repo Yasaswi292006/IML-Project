@@ -1,0 +1,32 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# App feedback logs and local databases
+data/feedback_log.csv
+data/feedback_log.csv.tmp
+models/feedback_log.csv
+models/lgb/historical_stats.json
+
+# Streamlit runtime logs
+streamlit.log
+streamlit_utf8.log
+*.log
+
+# Scratch / throwaway scripts
+scratch/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE settings
+.vscode/
+.idea/
