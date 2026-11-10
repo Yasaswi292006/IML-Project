@@ -48,7 +48,7 @@
     ],
     "cv_f1_mean": 0.6551,
     "cv_f1_std": 0.0289,
-    "honest": true,
+    "pre_dispatch": true,
     "leaky_features_removed": []
   },
   "scoring_rule_validator": {
@@ -74,6 +74,6 @@
         349
       ]
     ],
-    "note": "This model includes road_closure_flag and priority \u2014 features used in the target variable formula. The near-perfect accuracy validates that the scoring rule is internally consistent, NOT that the model is a generalizable predictor. The HONEST model (gb_main.pkl) is what ASTER uses for live inference."
+    "note": "This model includes road_closure_flag and priority \u2014 features used in the target variable formula. The near-perfect accuracy validates that the scoring rule is internally consistent, NOT that the model is a generalizable predictor. The primary pre-dispatch model (gb_main.pkl) is what ASTER uses for live inference."
   }
 }

@@ -267,11 +267,11 @@ GradientBoostingClassifier(
 )
 ```
 
-### Evaluation — Honest Model (Pre-Dispatch Features Only)
+### Evaluation — Primary Model (Pre-Dispatch Features Only)
 
 > **On Leakage:** The target variable `impact_tier` is computed from four signals including `requires_road_closure` and `priority`. Including these directly as training features produces a near-deterministic 99.9% accuracy — the model merely reconstructs the formula. **ASTER removes these features from the training matrix** to produce a genuinely generalisable predictor.
 
-| Metric | Random Forest (all features) | GBM — Honest ✅ | GBM — Scoring Validator |
+| Metric | Random Forest (all features) | Gradient Boosting (Primary) ✅ | Scoring Rule Validator |
 |--------|:---:|:---:|:---:|
 | Accuracy | 90.6% | **90.6%** | 90.6% |
 | F1 (macro) | 0.8975 | **0.8943** | 0.8943 |
@@ -279,9 +279,9 @@ GradientBoostingClassifier(
 | AUC-ROC (OvR) | 0.9778 | **0.9740** | 0.9740 |
 | 5-Fold CV F1 | — | **0.9006 ± 0.0113** | — |
 
-**ASTER uses only the Honest GBM for live inference.** The Scoring Validator is saved separately as a transparency artefact.
+**ASTER uses the primary Gradient Boosting model for live inference.** The Scoring Validator is saved separately as a transparency artefact.
 
-### Top Features — Honest Model (by Gini importance)
+### Top Features — Primary Model (by Gini importance)
 1. `is_named_corridor` — whether event is on a named BTP corridor
 2. `corridor_closure_rate` — corridor's historical road-closure rate
 3. `cause_risk_rate` — historical High-priority fraction for this cause
@@ -375,7 +375,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 
 *Then it generates a response plan. Not a generic alert — a specific plan. For a water logging event on ORR East at 9 AM, it tells you: 4 officers, heavy barricading, mandatory diversion, deploy within 5 minutes, alert BBMP drainage cell, avoid the underpass at Marathahalli.*
 
-*We validated this on 8,173 real events across Nov 2023 to April 2024. The model is honest about its assumptions — the target variable is derived from operational signals, not arbitrary labels. The recommendation engine is grounded in BTP SOP logic.*
+*We validated this on 8,173 real events across Nov 2023 to April 2024. The operational architecture is transparent about its assumptions — the target variable is derived from operational signals, not arbitrary labels. The recommendation engine is grounded in BTP SOP logic.*
 
 *The system features a high-performance React tactical command center backed by FastAPI, designed for direct integration with ASTRAM's API. The model artefacts are saved and portable. The only dependency is event metadata that BTP already captures.*
 
@@ -389,7 +389,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 | **Real-Time Context** | Live weather API hook automatically escalates tier in adverse conditions |
 | **Closed Learning Loop** | Interactive UI to log officer feedback directly into next month's training data |
 | **Resource Optimization** | Hard station-capacity limits prevent impossible manpower deployments |
-| **Honest engineering** | Prevents data leakage; target construction is transparent |
+| **Zero Data Leakage** | Prevents data leakage; target construction is transparent |
 | **Operational realism** | Cause-specific actions, peak-hour escalation, BTP corridor awareness |
 | **End-to-end** | From raw CSV to trained model to polished demo — zero TODOs |
 | **Speed** | Sub-2-second inference + response plan on standard hardware |

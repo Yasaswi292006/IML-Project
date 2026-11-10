@@ -27,7 +27,7 @@ export default function ModelPerformanceTab() {
       {/* Metric Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
         <div className="metric-card" style={{ borderLeft: "4px solid #10B981" }}>
-          <div className="metric-title">Honest Model Accuracy</div>
+          <div className="metric-title">Primary Model Accuracy</div>
           <div className="metric-value" style={{ color: "#10B981" }}>88.4%</div>
           <div className="metric-sub">Stratified test evaluation</div>
         </div>
@@ -90,7 +90,7 @@ export default function ModelPerformanceTab() {
         <div className="metric-card">
           <h4 style={{ fontSize: "1.05rem", fontWeight: "700", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px", color: "#10B981" }}>
             <ShieldCheck size={18} />
-            Honest Pre-Dispatch Architecture
+            Pre-Dispatch Operational Architecture
           </h4>
           <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", lineHeight: "1.6" }}>
             Many operational ML benchmarks artificially inflate performance by training on <strong>post-incident features</strong> (such as final resolution duration or actual police officer counts).

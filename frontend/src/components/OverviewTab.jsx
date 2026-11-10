@@ -94,7 +94,7 @@ export default function OverviewTab({ overviewData, eventsData, apiKey }) {
         <div className="metric-card">
           <div className="metric-title">Median Resolution</div>
           <div className="metric-value" style={{ color: "#60A5FA" }}>{metrics.median_resolution_min} min</div>
-          <div className="metric-sub">Honest pre-dispatch baseline</div>
+          <div className="metric-sub">Operational benchmark</div>
         </div>
       </div>
 

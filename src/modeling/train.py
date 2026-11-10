@@ -3,7 +3,7 @@ ASTER - Model Training
 =======================
 Trains a two-stage classification pipeline:
   Stage 1 - Baseline:    Random Forest
-  Stage 2 - Main (Honest): Gradient Boosting WITHOUT leaky features
+  Stage 2 - Main (Primary): Gradient Boosting WITHOUT post-dispatch leaky features
   Stage 3 - Demo:        Gradient Boosting WITH all features (for scoring rule validation only)
 
 Target: impact_tier  ->  Low / Medium / High
@@ -15,7 +15,7 @@ NOTE ON LEAKAGE:
   creates a deterministic model (~99.9% accuracy) that simply re-learns the
   scoring rule — NOT a generalizable predictor.
 
-  The HONEST model removes these features and achieves ~93% accuracy using
+  The PRIMARY pre-dispatch model removes these features and achieves generalizable accuracy using
   only pre-dispatch observable inputs: location, cause, vehicle type, time,
   and historical frequency rates.
 """
@@ -49,7 +49,7 @@ from src.features.feature_engineering import build_features, encode_for_model
 LABEL_ORDER = ["Low", "Medium", "High"]
 
 # ─────────────────────────────────────────────────────────────────────
-# Features that MUST be excluded from honest model (they are computed
+# Features that MUST be excluded from pre-dispatch model (they are computed
 # from or directly encode parts of the target variable formula)
 # ─────────────────────────────────────────────────────────────────────
 LEAKY_FEATURES = {
@@ -93,7 +93,7 @@ def train_baseline(X_train, y_train, class_weight_map):
 
 
 def train_main_model(X_train, y_train, class_weight_map):
-    """Honest GBM — no leaky features."""
+    """Main GBM — no post-dispatch leaky features."""
     gb = GradientBoostingClassifier(
         n_estimators=300, learning_rate=0.05,
         max_depth=5, min_samples_leaf=10,
@@ -201,11 +201,11 @@ def train_pipeline(data_path: str, model_dir: str, assets_dir: str):
     X_test_all, _ = encode_for_model(df_test, encoders)
     X_all, _ = encode_for_model(df_full_feat, encoders)
 
-    # ── HONEST feature matrices (leaky cols removed) ─────────────
-    X_train_honest = remove_leaky_cols(X_train_all)
-    X_test_honest = remove_leaky_cols(X_test_all)
-    X_honest = remove_leaky_cols(X_all)
-    honest_fnames = list(X_train_honest.columns)
+    # ── Pre-dispatch feature matrices (leaky cols removed) ─────────────
+    X_train_clean = remove_leaky_cols(X_train_all)
+    X_test_clean = remove_leaky_cols(X_test_all)
+    X_clean = remove_leaky_cols(X_all)
+    clean_fnames = list(X_train_clean.columns)
 
     le = LabelEncoder()
     le.classes_ = np.array(LABEL_ORDER)
@@ -214,7 +214,7 @@ def train_pipeline(data_path: str, model_dir: str, assets_dir: str):
     y = le.transform(df_full_feat["impact_tier"])
 
     print(f"  Class distribution (Train): {dict(zip(le.classes_, np.bincount(y_train)))}")
-    print(f"  Honest feature count: {len(honest_fnames)} (removed {len(list(X_train_all.columns)) - len(honest_fnames)} leaky features)")
+    print(f"  Pre-dispatch feature count: {len(clean_fnames)} (removed {len(list(X_train_all.columns)) - len(clean_fnames)} leaky features)")
 
     class_weights = compute_class_weights(y_train, le)
 
@@ -222,9 +222,9 @@ def train_pipeline(data_path: str, model_dir: str, assets_dir: str):
     rf = train_baseline(X_train_all, y_train, class_weights)
     rf_metrics = evaluate(rf, X_test_all, y_test, le, label="Random Forest Baseline")
 
-    print("\n[4/7] Training HONEST Gradient Boosting (pre-dispatch features only)...")
-    gb = train_main_model(X_train_honest, y_train, class_weights)
-    gb_metrics = evaluate(gb, X_test_honest, y_test, le, label="Gradient Boosting — HONEST (No Leakage)")
+    print("\n[4/7] Training Primary Gradient Boosting (pre-dispatch features only)...")
+    gb = train_main_model(X_train_clean, y_train, class_weights)
+    gb_metrics = evaluate(gb, X_test_clean, y_test, le, label="Gradient Boosting — Primary (Pre-Dispatch)")
 
     print("\n[5/7] Training Scoring-Rule Validation model (all features — shows rule consistency)...")
     gb_full = train_main_model(X_train_all, y_train, class_weights)
@@ -233,62 +233,62 @@ def train_pipeline(data_path: str, model_dir: str, assets_dir: str):
         "This model includes road_closure_flag and priority — features used in the target "
         "variable formula. The near-perfect accuracy validates that the scoring rule is "
         "internally consistent, NOT that the model is a generalizable predictor. "
-        "The HONEST model (gb_main.pkl) is what ASTER uses for live inference."
+        "The primary pre-dispatch model (gb_main.pkl) is what ASTER uses for live inference."
     )
 
-    print("\n[6/7] Cross-validation (Time-Series Split, HONEST model)...")
+    print("\n[6/7] Cross-validation (Time-Series Split, Primary model)...")
     tscv = TimeSeriesSplit(n_splits=5)
-    cv_scores = cross_val_score(gb, X_honest, y, cv=tscv, scoring="f1_macro", n_jobs=-1)
+    cv_scores = cross_val_score(gb, X_clean, y, cv=tscv, scoring="f1_macro", n_jobs=-1)
     print(f"  CV F1-macro: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
     gb_metrics["cv_f1_mean"] = round(cv_scores.mean(), 4)
     gb_metrics["cv_f1_std"] = round(cv_scores.std(), 4)
-    gb_metrics["honest"] = True
-    gb_metrics["leaky_features_removed"] = list(set(X_train_all.columns) - set(honest_fnames))
+    gb_metrics["pre_dispatch"] = True
+    gb_metrics["leaky_features_removed"] = list(set(X_train_all.columns) - set(clean_fnames))
 
     print("\n[7/7] Saving artefacts...")
 
-    # Save HONEST model (used for live inference)
+    # Save primary model (used for live inference)
     joblib.dump(gb, os.path.join(model_dir, "gb_main.pkl"))
     joblib.dump(rf, os.path.join(model_dir, "rf_baseline.pkl"))
     joblib.dump(gb_full, os.path.join(model_dir, "gb_scoring_rule.pkl"))  # for transparency display
     joblib.dump(encoders, os.path.join(model_dir, "encoders.pkl"))
     joblib.dump(freq_maps, os.path.join(model_dir, "freq_maps.pkl"))
     joblib.dump(le, os.path.join(model_dir, "label_encoder.pkl"))
-    joblib.dump(honest_fnames, os.path.join(model_dir, "feature_names.pkl"))
+    joblib.dump(clean_fnames, os.path.join(model_dir, "feature_names.pkl"))
 
     # Save feature importance
-    fi = get_feature_importance(gb, honest_fnames)
+    fi = get_feature_importance(gb, clean_fnames)
     fi.to_csv(os.path.join(model_dir, "feature_importance.csv"), index=False)
 
     # Save metrics
     metrics_all = {
         "random_forest": rf_metrics,
-        "gradient_boosting": gb_metrics,          # HONEST model
+        "gradient_boosting": gb_metrics,          # Primary model
         "scoring_rule_validator": gb_full_metrics, # ALL features (transparency only)
     }
     with open(os.path.join(model_dir, "evaluation_metrics.json"), "w") as f:
         json.dump(metrics_all, f, indent=2)
 
-    # Plots for honest model
+    # Plots for primary model
     cm = np.array(gb_metrics["confusion_matrix"])
     plot_confusion_matrix(
         cm, le.classes_,
         os.path.join(assets_dir, "confusion_matrix.png"),
-        title="ASTER Confusion Matrix — Honest Model (Pre-Dispatch Features Only)"
+        title="ASTER Confusion Matrix — Primary Model (Pre-Dispatch Features Only)"
     )
     plot_feature_importance(fi, os.path.join(assets_dir, "feature_importance.png"),
-                            title="Top Features — Honest GBM (No Leaky Features)")
+                            title="Top Features — Primary GBM (Pre-Dispatch)")
 
     # Save processed dataset
     df_full_feat.to_csv(os.path.join(model_dir, "processed_dataset.csv"), index=False)
 
     print("\n[OK] Training complete.")
     print(f"\n  RF  accuracy       : {rf_metrics['accuracy']}")
-    print(f"  GB  HONEST acc     : {gb_metrics['accuracy']}  <-- USE THIS")
+    print(f"  GB  Primary acc    : {gb_metrics['accuracy']}  <-- USE THIS")
     print(f"  GB  Scoring-rule   : {gb_full_metrics['accuracy']}  (leaky, validation only)")
-    print(f"  GB  HONEST F1-macro: {gb_metrics['f1_macro']}")
-    print(f"  GB  HONEST AUC-ROC : {gb_metrics['auc_roc']}")
-    print(f"  GB  HONEST 5-CV F1 : {gb_metrics['cv_f1_mean']} ± {gb_metrics['cv_f1_std']}")
+    print(f"  GB  Primary F1-macro: {gb_metrics['f1_macro']}")
+    print(f"  GB  Primary AUC-ROC : {gb_metrics['auc_roc']}")
+    print(f"  GB  Primary 5-CV F1 : {gb_metrics['cv_f1_mean']} ± {gb_metrics['cv_f1_std']}")
 
     return gb, encoders, le
 

@@ -53,8 +53,8 @@ def test_primary_models():
     
     y_test = le.transform(df_test["impact_tier"])
     
-    # Remove leaky columns for GB honest model
-    X_test_honest = remove_leaky_cols(X_test_all)
+    # Remove leaky columns for GB pre-dispatch model
+    X_test_clean = remove_leaky_cols(X_test_all)
 
     print(f"Test Set Size: {X_test_all.shape[0]} samples")
 
@@ -63,8 +63,8 @@ def test_primary_models():
     rf_acc = accuracy_score(y_test, rf_pred)
     rf_f1 = f1_score(y_test, rf_pred, average="macro")
     
-    # Evaluate GB (honest uses filtered features)
-    gb_pred = gb.predict(X_test_honest)
+    # Evaluate GB (pre-dispatch uses filtered features)
+    gb_pred = gb.predict(X_test_clean)
     gb_acc = accuracy_score(y_test, gb_pred)
     gb_f1 = f1_score(y_test, gb_pred, average="macro")
 

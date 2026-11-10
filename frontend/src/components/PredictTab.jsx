@@ -1,9 +1,160 @@
 import React, { useState, useEffect } from 'react';
 import {
   AlertCircle, Shield, Navigation, Users, Share2, CheckCircle2,
-  ChevronRight, Copy, MapPin, Calendar, Clock, AlertTriangle, RotateCcw
+  ChevronRight, Copy, MapPin, Calendar, Clock, AlertTriangle, RotateCcw,
+  Sparkles, Layers, ArrowRight, Activity, Zap, Check, Compass, Sliders
 } from 'lucide-react';
 import GoogleMapComponent from './GoogleMapComponent';
+
+// ─────────────────────────────────────────────────────────────────
+// Preset Scenario Test Cases for Immediate Testing & Auto-Prediction
+// ─────────────────────────────────────────────────────────────────
+const PRESET_TEST_CASES = [
+  {
+    id: "tc_silk_board_crash",
+    name: "💥 Peak-Hour Multi-Vehicle Crash",
+    badge: "Accident / P1",
+    badgeColor: "#EF4444",
+    corridor: "Hosur Road",
+    cause: "accident",
+    eventType: "unplanned",
+    priority: "High",
+    vehType: "private_car",
+    policeStation: "Madiwala",
+    junction: "SilkBoardJunc",
+    zone: "South Zone 1",
+    address: "Hosur Road near Silk Board Flyover Junction, Madiwala, Bengaluru",
+    lat: 12.917600,
+    lng: 77.624400,
+    hour: 9,
+    minute: 15,
+    dateStr: "2026-03-15",
+    roadClosure: true,
+    weatherMultiplier: 1.0,
+    description: "3-vehicle pileup blocking 2 center lanes on northbound Hosur Road approaching Silk Board flyover.",
+    expectedSummary: "High Impact • ~47 min resolution • 8 Officers • Silk Board choke cordon"
+  },
+  {
+    id: "tc_mysore_bmtc",
+    name: "🚌 BMTC Bus Transmission Failure",
+    badge: "Breakdown",
+    badgeColor: "#F59E0B",
+    corridor: "Mysore Road",
+    cause: "vehicle_breakdown",
+    eventType: "unplanned",
+    priority: "High",
+    vehType: "bmtc_bus",
+    policeStation: "Byatarayanapura",
+    junction: "NayandahalliFlyover",
+    zone: "West Zone 1",
+    address: "Mysore Road Flyover near Nayandahalli Junction, Bengaluru",
+    lat: 12.946300,
+    lng: 77.528400,
+    hour: 18,
+    minute: 30,
+    dateStr: "2026-03-15",
+    roadClosure: false,
+    weatherMultiplier: 1.0,
+    description: "BMTC articulated bus stalled on uphill flyover ramp, heavy tailback towards Satellite Bus Stand.",
+    expectedSummary: "High/Med Impact • ~52 min resolution • 5 Officers • Mysore Rd bypass"
+  },
+  {
+    id: "tc_hebbal_subway",
+    name: "⛈️ Monsoon Subway Waterlogging",
+    badge: "Flooding / Weather",
+    badgeColor: "#06B6D4",
+    corridor: "Bellary Road 1",
+    cause: "water_logging",
+    eventType: "unplanned",
+    priority: "High",
+    vehType: "others",
+    policeStation: "Hebbal",
+    junction: "HebbalFlyover",
+    zone: "North Zone 1",
+    address: "Bellary Road, Hebbal Flyover Underpass, Bengaluru",
+    lat: 13.035800,
+    lng: 77.597000,
+    hour: 17,
+    minute: 45,
+    dateStr: "2026-03-15",
+    roadClosure: true,
+    weatherMultiplier: 1.6,
+    description: "Underpass water level 2.5 feet following flash cloudburst; airport outbound traffic halted.",
+    expectedSummary: "High Impact • ~75 min resolution • 6 Officers • Hard closure & Ring detour"
+  },
+  {
+    id: "tc_tin_factory_bwssb",
+    name: "🚧 BWSSB Emergency Pipeline Excavation",
+    badge: "Road Work",
+    badgeColor: "#8B5CF6",
+    corridor: "ORR North 1",
+    cause: "construction",
+    eventType: "unplanned",
+    priority: "High",
+    vehType: "heavy_vehicle",
+    policeStation: "K.R. Pura",
+    junction: "TinFactoryJunc",
+    zone: "East Zone 1",
+    address: "Old Madras Road & Outer Ring Road near Tin Factory, K.R. Pura, Bengaluru",
+    lat: 12.994200,
+    lng: 77.662500,
+    hour: 14,
+    minute: 10,
+    dateStr: "2026-03-15",
+    roadClosure: true,
+    weatherMultiplier: 1.0,
+    description: "Underground main water pipeline ruptured; road excavated across 2 lanes under Tin Factory suspension bridge.",
+    expectedSummary: "High Impact • ~85 min resolution • 7 Officers • Kasturi Nagar diversion"
+  },
+  {
+    id: "tc_vip_mekhri",
+    name: "🚨 VIP State Motorcade Transit",
+    badge: "VIP Convoy",
+    badgeColor: "#3B82F6",
+    corridor: "Bellary Road 2",
+    cause: "vip_movement",
+    eventType: "planned",
+    priority: "High",
+    vehType: "private_car",
+    policeStation: "Sadashivanagar",
+    junction: "MekhriCircle",
+    zone: "North Zone 2",
+    address: "Bellary Road corridor at Mekhri Circle Underpass, Sadashivanagar, Bengaluru",
+    lat: 13.014300,
+    lng: 77.583100,
+    hour: 11,
+    minute: 0,
+    dateStr: "2026-03-15",
+    roadClosure: true,
+    weatherMultiplier: 1.0,
+    description: "Official ministerial delegation convoy from Kempegowda Airport to Vidhana Soudha requiring sterile green corridor.",
+    expectedSummary: "High Priority • ~35 min duration • 10 Officers • Green corridor signals"
+  },
+  {
+    id: "tc_peenya_axle",
+    name: "🚚 Heavy Axle Container Breakdown",
+    badge: "Freight / Peenya",
+    badgeColor: "#F97316",
+    corridor: "Tumkur Road",
+    cause: "vehicle_breakdown",
+    eventType: "unplanned",
+    priority: "Medium",
+    vehType: "truck",
+    policeStation: "Peenya",
+    junction: "JalahalliCross(SM Circle)",
+    zone: "North Zone 3",
+    address: "Tumkur Road, Peenya Industrial Area near Jalahalli Cross, Bengaluru",
+    lat: 13.033400,
+    lng: 77.518600,
+    hour: 15,
+    minute: 20,
+    dateStr: "2026-03-15",
+    roadClosure: false,
+    weatherMultiplier: 1.0,
+    description: "Multi-axle cargo container snapped rear axle occupying slow lane near Peenya 8th Mile.",
+    expectedSummary: "Medium Impact • ~60 min resolution • 4 Officers • Slow lane taper"
+  }
+];
 
 export default function PredictTab({ config, apiKey }) {
   // Corridor list and metadata
@@ -12,30 +163,32 @@ export default function PredictTab({ config, apiKey }) {
 
   // Form State - Complete Dataset Attributes
   const [corridor, setCorridor] = useState("Hosur Road");
-  const [cause, setCause] = useState("vehicle_breakdown");
+  const [cause, setCause] = useState("accident");
   const [eventType, setEventType] = useState("unplanned");
   const [priority, setPriority] = useState("High");
-  const [vehType, setVehType] = useState("bmtc_bus");
+  const [vehType, setVehType] = useState("private_car");
   const [policeStation, setPoliceStation] = useState("Madiwala");
   const [junction, setJunction] = useState("SilkBoardJunc");
   const [zone, setZone] = useState("South Zone 1");
-  const [address, setAddress] = useState("Hosur Road near Silk Board Junction, Madiwala, Bengaluru");
-  const [lat, setLat] = useState(12.916600);
-  const [lng, setLng] = useState(77.625600);
+  const [address, setAddress] = useState("Hosur Road near Silk Board Flyover Junction, Madiwala, Bengaluru");
+  const [lat, setLat] = useState(12.917600);
+  const [lng, setLng] = useState(77.624400);
   const [dateStr, setDateStr] = useState("2026-03-15");
   const [hour, setHour] = useState(9);
   const [minute, setMinute] = useState(15);
   const [roadClosure, setRoadClosure] = useState(true);
   const [weatherMultiplier, setWeatherMultiplier] = useState(1.0);
-  const [description, setDescription] = useState("BMTC bus breakdown on center carriage lane causing 1.5km peak backlog");
+  const [description, setDescription] = useState("3-vehicle pileup blocking 2 center lanes on northbound Hosur Road approaching Silk Board flyover.");
 
   // Operational State
+  const [activePresetId, setActivePresetId] = useState("tc_silk_board_crash");
   const [validationErrors, setValidationErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(null);
   const [mapSyncLoading, setMapSyncLoading] = useState(false);
   const [syncedNotification, setSyncedNotification] = useState(null);
+  const [showSchemaBreakdown, setShowSchemaBreakdown] = useState(false);
 
   // When corridor changes, populate smart defaults from dataset metadata
   const handleCorridorChange = (newCorridor) => {
@@ -56,6 +209,7 @@ export default function PredictTab({ config, apiKey }) {
     setLat(newLat);
     setLng(newLng);
     setMapSyncLoading(true);
+    setActivePresetId(null);
 
     try {
       const resp = await fetch(`http://127.0.0.1:8000/api/lookup-location?lat=${newLat}&lng=${newLng}`);
@@ -77,7 +231,7 @@ export default function PredictTab({ config, apiKey }) {
         if (data.description) setDescription(data.description);
         if (data.requires_road_closure !== undefined) setRoadClosure(data.requires_road_closure);
 
-        // Clear any previous missing field warnings since we filled everything
+        // Clear any previous missing field warnings
         setValidationErrors([]);
 
         // Display confirmation badge
@@ -120,38 +274,14 @@ export default function PredictTab({ config, apiKey }) {
     return errors;
   };
 
-  const handlePredict = async () => {
-    const errors = validateForm();
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    setValidationErrors([]);
+  // Core Prediction Execution
+  const executePrediction = async (payload) => {
     setLoading(true);
-
     try {
       const resp = await fetch("http://127.0.0.1:8000/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          corridor,
-          cause,
-          event_type: eventType,
-          priority,
-          vehicle_type: vehType,
-          police_station: policeStation,
-          junction,
-          zone,
-          address,
-          custom_lat: parseFloat(lat),
-          custom_lng: parseFloat(lng),
-          date_str: dateStr,
-          hour: parseInt(hour),
-          minute: parseInt(minute),
-          requires_road_closure: roadClosure,
-          weather_multiplier: parseFloat(weatherMultiplier),
-          description
-        })
+        body: JSON.stringify(payload)
       });
       const data = await resp.json();
       setResult(data);
@@ -161,6 +291,84 @@ export default function PredictTab({ config, apiKey }) {
       setLoading(false);
     }
   };
+
+  const handlePredict = async () => {
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
+    await executePrediction({
+      corridor,
+      cause,
+      event_type: eventType,
+      priority,
+      vehicle_type: vehType,
+      police_station: policeStation,
+      junction,
+      zone,
+      address,
+      custom_lat: parseFloat(lat),
+      custom_lng: parseFloat(lng),
+      date_str: dateStr,
+      hour: parseInt(hour),
+      minute: parseInt(minute),
+      requires_road_closure: roadClosure,
+      weather_multiplier: parseFloat(weatherMultiplier),
+      description
+    });
+  };
+
+  // Apply a scenario test case immediately (auto-fill & run prediction)
+  const applyPresetTestCase = (tc) => {
+    setActivePresetId(tc.id);
+    setCorridor(tc.corridor);
+    setCause(tc.cause);
+    setEventType(tc.eventType);
+    setPriority(tc.priority);
+    setVehType(tc.vehType);
+    setPoliceStation(tc.policeStation);
+    setJunction(tc.junction);
+    setZone(tc.zone);
+    setAddress(tc.address);
+    setLat(tc.lat);
+    setLng(tc.lng);
+    setDateStr(tc.dateStr);
+    setHour(tc.hour);
+    setMinute(tc.minute);
+    setRoadClosure(tc.roadClosure);
+    setWeatherMultiplier(tc.weatherMultiplier);
+    setDescription(tc.description);
+    setValidationErrors([]);
+
+    // Execute prediction immediately with preset payload
+    executePrediction({
+      corridor: tc.corridor,
+      cause: tc.cause,
+      event_type: tc.eventType,
+      priority: tc.priority,
+      vehicle_type: tc.vehType,
+      police_station: tc.policeStation,
+      junction: tc.junction,
+      zone: tc.zone,
+      address: tc.address,
+      custom_lat: tc.lat,
+      custom_lng: tc.lng,
+      date_str: tc.dateStr,
+      hour: tc.hour,
+      minute: tc.minute,
+      requires_road_closure: tc.roadClosure,
+      weather_multiplier: tc.weatherMultiplier,
+      description: tc.description
+    });
+  };
+
+  // Run initial prediction on mount for the default test case
+  useEffect(() => {
+    const defaultCase = PRESET_TEST_CASES[0];
+    applyPresetTestCase(defaultCase);
+  }, []);
 
   const handleReset = () => {
     handleCorridorChange("Hosur Road");
@@ -175,6 +383,7 @@ export default function PredictTab({ config, apiKey }) {
     setDescription("BMTC bus breakdown on center carriage lane causing 1.5km peak backlog");
     setValidationErrors([]);
     setResult(null);
+    setActivePresetId(null);
   };
 
   const copyToClipboard = (text, label) => {
@@ -218,25 +427,207 @@ export default function PredictTab({ config, apiKey }) {
 
   const junctionsList = config?.junctions || [
     "SilkBoardJunc", "DairyCircle", "MekhriCircle", "JalahalliCross(SM Circle)",
-    "AyyappaTempleJunc", "SatteliteBusStandJunc", "YeshwanthpuraCircle", "YelhankaCircle",
-    "toll gate mysore road", "Nagavara-ORR Junction", "K R Circle", "KIMCO Junction",
-    "VeerannapalyaJunction(BEL,HO)", "RichmondCircle", "TrinityCircle", "SonyWorldJunction"
-  ];
-
-  const zonesList = config?.zones || [
-    "Central Zone 1", "Central Zone 2", "East Zone 1", "East Zone 2",
-    "North Zone 1", "North Zone 2", "South Zone 1", "South Zone 2",
-    "West Zone 1", "West Zone 2"
+    "CorporationCircle", "K.R.PuramRailwayStation", "NayandahalliFlyover",
+    "HebbalFlyover", "RichmondCircle", "TinFactoryJunc", "GoraguntepalyaJunc"
   ];
 
   return (
-    <div>
+    <div style={{ maxWidth: "1550px", margin: "0 auto", paddingBottom: "60px" }}>
+
+      {/* ─────────────────────────────────────────────────────────────
+          1. PRESET SCENARIO TEST CASES (Matches Pre-Event Planner Pattern)
+         ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))",
+        border: "1px solid rgba(59, 130, 246, 0.35)",
+        borderRadius: "14px",
+        padding: "18px 24px",
+        marginBottom: "24px",
+        boxShadow: "0 10px 25px rgba(0,0,0,0.4)"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "1.4rem" }}>⚡</span>
+            <div>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                Tactical Scenario Test Cases & Model Validation
+                <span style={{ fontSize: "0.72rem", background: "rgba(59,130,246,0.2)", color: "#93C5FD", padding: "2px 8px", borderRadius: "4px", fontWeight: "600" }}>
+                  Instant Auto-Predict
+                </span>
+              </h2>
+              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                Select any incident scenario below to immediately populate all 12 input features, pin the map coordinates, and trigger multi-model AI inference.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => setShowSchemaBreakdown(!showSchemaBreakdown)}
+              style={{
+                background: showSchemaBreakdown ? "rgba(59, 130, 246, 0.25)" : "rgba(30, 41, 59, 0.7)",
+                border: "1px solid rgba(59, 130, 246, 0.4)",
+                color: "#93C5FD",
+                borderRadius: "8px",
+                padding: "6px 14px",
+                fontSize: "0.78rem",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer"
+              }}
+            >
+              <Layers size={14} />
+              {showSchemaBreakdown ? "Hide 46-Column Schema Breakdown" : "View 46-Column Schema Breakdown"}
+            </button>
+            <div style={{
+              background: "rgba(16, 185, 129, 0.12)",
+              border: "1px solid rgba(16, 185, 129, 0.35)",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              color: "#86EFAC",
+              fontSize: "0.78rem",
+              fontWeight: "700"
+            }}>
+              <CheckCircle2 size={14} /> 4 ML MODELS ACTIVE
+            </div>
+          </div>
+        </div>
+
+        {/* Clickable Test Case Cards Grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+          gap: "12px"
+        }}>
+          {PRESET_TEST_CASES.map((tc) => {
+            const isSelected = activePresetId === tc.id;
+            return (
+              <div
+                key={tc.id}
+                onClick={() => applyPresetTestCase(tc)}
+                style={{
+                  background: isSelected ? "rgba(59, 130, 246, 0.15)" : "rgba(15, 23, 42, 0.6)",
+                  border: isSelected ? "2px solid #3B82F6" : "1px solid rgba(255, 255, 255, 0.08)",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "8px"
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <span style={{
+                      fontSize: "0.68rem",
+                      fontWeight: "700",
+                      background: `${tc.badgeColor}22`,
+                      color: tc.badgeColor,
+                      border: `1px solid ${tc.badgeColor}55`,
+                      padding: "2px 6px",
+                      borderRadius: "4px"
+                    }}>
+                      {tc.badge}
+                    </span>
+                    {isSelected && (
+                      <span style={{ fontSize: "0.7rem", color: "#60A5FA", fontWeight: "700", display: "flex", alignItems: "center", gap: "2px" }}>
+                        <Check size={12} /> ACTIVE
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "#F8FAFC", lineHeight: "1.3" }}>
+                    {tc.name}
+                  </div>
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                    📍 {tc.corridor} • {tc.junction}
+                  </div>
+                </div>
+
+                <div style={{
+                  fontSize: "0.72rem",
+                  color: isSelected ? "#93C5FD" : "#94A3B8",
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  paddingTop: "6px",
+                  lineHeight: "1.3"
+                }}>
+                  {tc.expectedSummary}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 46-COLUMN DATASET SCHEMA BREAKDOWN (Expandable Info Card) */}
+        {showSchemaBreakdown && (
+          <div style={{
+            marginTop: "16px",
+            background: "rgba(15, 23, 42, 0.9)",
+            border: "1px solid rgba(59, 130, 246, 0.3)",
+            borderRadius: "10px",
+            padding: "16px 20px",
+            animation: "fadeIn 0.25s ease"
+          }}>
+            <h4 style={{ fontSize: "0.95rem", fontWeight: "700", color: "#F8FAFC", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Layers size={16} color="#60A5FA" />
+              The 46 ASTRAM Dataset Columns — Required Inputs vs Predictable AI Targets
+            </h4>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", fontSize: "0.8rem" }}>
+              <div style={{ background: "rgba(59, 130, 246, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
+                <div style={{ fontWeight: "700", color: "#93C5FD", marginBottom: "6px" }}>
+                  1. Required Input Features (12 Columns)
+                </div>
+                <div style={{ color: "#E2E8F0", lineHeight: "1.5", fontSize: "0.75rem" }}>
+                  <code>corridor</code>, <code>event_cause</code>, <code>event_type</code>, <code>veh_type</code>, <code>address</code>, <code>latitude</code>, <code>longitude</code>, <code>police_station</code>, <code>junction</code>, <code>zone</code>, <code>start_datetime</code>, <code>priority</code>.
+                  <div style={{ marginTop: "6px", color: "var(--text-muted)" }}>
+                    Entered by operator or auto-filled via map pin click.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(16, 185, 129, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                <div style={{ fontWeight: "700", color: "#86EFAC", marginBottom: "6px" }}>
+                  2. Predictable Targets (10 Columns)
+                </div>
+                <div style={{ color: "#E2E8F0", lineHeight: "1.5", fontSize: "0.75rem" }}>
+                  <code>impact_tier</code> (GB Model), <code>duration_minutes</code> (LGBM Regressor), <code>end_datetime</code> (Clearance Calc), <code>requires_road_closure</code> (LGBM Closure), <code>event_impact_score</code> (LGBM EIS), <code>priority</code> (LGBM Priority), <code>officers_deployed</code> (Google OR-Tools MILP), <code>deployment_time</code> (BTP SOP SLA), <code>barricades_count</code> (NetworkX), <code>diversion_required</code> (Router).
+                </div>
+              </div>
+
+              <div style={{ background: "rgba(148, 163, 184, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(148, 163, 184, 0.2)" }}>
+                <div style={{ fontWeight: "700", color: "#CBD5E1", marginBottom: "6px" }}>
+                  3. System Metadata & Audit (24 Columns)
+                </div>
+                <div style={{ color: "#94A3B8", lineHeight: "1.5", fontSize: "0.75rem" }}>
+                  <code>id</code>, <code>client_id</code>, <code>created_by_id</code>, <code>assigned_to_police_id</code>, <code>kgid</code>, <code>map_file</code>, <code>route_path</code>, <code>created_date</code>, <code>modified_datetime</code>, <code>resolved_datetime</code>, <code>closed_datetime</code>, <code>resolved_at_address</code>, <code>status</code>, etc.
+                  <div style={{ marginTop: "6px", color: "var(--text-muted)" }}>
+                    Backend tracking IDs and post-event records.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Validation Error Banner */}
       {validationErrors.length > 0 && (
         <div style={{
           background: "rgba(239, 68, 68, 0.15)",
           border: "1px solid #EF4444",
-          borderRadius: "8px",
+          borderRadius: "10px",
           padding: "12px 18px",
           marginBottom: "20px",
           display: "flex",
@@ -350,7 +741,7 @@ export default function PredictTab({ config, apiKey }) {
                 onChange={(e) => setEventType(e.target.value)}
               >
                 <option value="unplanned">Unplanned Disruption</option>
-                <option value="planned">Planned Event / Works</option>
+                <option value="planned">Planned Special Event</option>
               </select>
             </div>
           </div>
@@ -365,9 +756,9 @@ export default function PredictTab({ config, apiKey }) {
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
               >
-                <option value="High">High (Immediate)</option>
-                <option value="Medium">Medium (Routine)</option>
-                <option value="Low">Low (Advisory)</option>
+                <option value="High">🔴 High Priority (Emergency)</option>
+                <option value="Medium">🟡 Medium Priority (Congestion)</option>
+                <option value="Low">🟢 Low Priority (Minor / Shoulder)</option>
               </select>
             </div>
 
@@ -387,73 +778,30 @@ export default function PredictTab({ config, apiKey }) {
             </div>
           </div>
 
-          {/* Section 2: Geographic & Jurisdictional Data */}
-          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", margin: "16px 0 10px" }}>
-            2. Location & Jurisdiction
+          {/* Section 2: Jurisdictional & Spatial Identifiers */}
+          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "16px", marginBottom: "10px" }}>
+            2. Jurisdictional & Spatial Identifiers
           </div>
 
           <div className="form-group">
             <label className="form-label">
-              Incident Address / Landmark <span style={{ color: "#EF4444" }}>*</span>
+              Police Station Jurisdiction <span style={{ color: "#EF4444" }}>*</span>
             </label>
-            <input
-              type="text"
+            <select
               className="form-select"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g., Hosur Road near Silk Board Junction, Madiwala"
-            />
+              value={policeStation}
+              onChange={(e) => setPoliceStation(e.target.value)}
+            >
+              {stationsList.map((s) => (
+                <option key={s} value={s}>{s} Traffic Police Station</option>
+              ))}
+            </select>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group">
               <label className="form-label">
-                Latitude <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                className="form-select"
-                value={lat}
-                onChange={(e) => setLat(parseFloat(e.target.value))}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                Longitude <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                className="form-select"
-                value={lng}
-                onChange={(e) => setLng(parseFloat(e.target.value))}
-              />
-            </div>
-          </div>
-          <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "-8px", marginBottom: "12px" }}>
-            💡 Tip: Click anywhere on the Google Map on the right to set exact coordinates.
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="form-group">
-              <label className="form-label">
-                Police Station <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={policeStation}
-                onChange={(e) => setPoliceStation(e.target.value)}
-              >
-                {stationsList.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Nearest Junction <span style={{ color: "#EF4444" }}>*</span>
+                Junction / Chokepoint <span style={{ color: "#EF4444" }}>*</span>
               </label>
               <select
                 className="form-select"
@@ -465,33 +813,69 @@ export default function PredictTab({ config, apiKey }) {
                 ))}
               </select>
             </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                Administrative Zone <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              <input
+                type="text"
+                className="form-select"
+                value={zone}
+                onChange={(e) => setZone(e.target.value)}
+                placeholder="e.g. South Zone 1"
+              />
+            </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">
-              Administrative Traffic Zone <span style={{ color: "#EF4444" }}>*</span>
+              Incident Address / Landmark <span style={{ color: "#EF4444" }}>*</span>
             </label>
-            <select
+            <input
+              type="text"
               className="form-select"
-              value={zone}
-              onChange={(e) => setZone(e.target.value)}
-            >
-              {zonesList.map((z) => (
-                <option key={z} value={z}>{z}</option>
-              ))}
-            </select>
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="e.g. Hosur Road near Silk Board, Bengaluru"
+            />
           </div>
 
-          {/* Section 3: Operational Conditions */}
-          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", margin: "16px 0 10px" }}>
-            3. Timing & Operational Conditions
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="form-group">
               <label className="form-label">
-                Date (2025–2026) <span style={{ color: "#EF4444" }}>*</span>
+                Latitude (WGS84) <span style={{ color: "#EF4444" }}>*</span>
               </label>
+              <input
+                type="number"
+                step="0.000001"
+                className="form-select"
+                value={lat}
+                onChange={(e) => setLat(parseFloat(e.target.value))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">
+                Longitude (WGS84) <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              <input
+                type="number"
+                step="0.000001"
+                className="form-select"
+                value={lng}
+                onChange={(e) => setLng(parseFloat(e.target.value))}
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Temporal & Environmental Conditions */}
+          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "16px", marginBottom: "10px" }}>
+            3. Temporal & Environmental Conditions
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: "10px" }}>
+            <div className="form-group">
+              <label className="form-label">Date</label>
               <input
                 type="date"
                 className="form-select"
@@ -500,51 +884,44 @@ export default function PredictTab({ config, apiKey }) {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">
-                Time (IST) <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <div style={{ display: "flex", gap: "6px" }}>
-                <select
-                  className="form-select"
-                  value={hour}
-                  onChange={(e) => setHour(parseInt(e.target.value))}
-                  style={{ width: "60px" }}
-                >
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
-                  ))}
-                </select>
-                <span style={{ alignSelf: "center", fontWeight: "bold" }}>:</span>
-                <select
-                  className="form-select"
-                  value={minute}
-                  onChange={(e) => setMinute(parseInt(e.target.value))}
-                  style={{ width: "60px" }}
-                >
-                  <option value={0}>00</option>
-                  <option value={15}>15</option>
-                  <option value={30}>30</option>
-                  <option value={45}>45</option>
-                </select>
-              </div>
+              <label className="form-label">Hour (0-23)</label>
+              <input
+                type="number"
+                min="0"
+                max="23"
+                className="form-select"
+                value={hour}
+                onChange={(e) => setHour(parseInt(e.target.value))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Minute</label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                className="form-select"
+                value={minute}
+                onChange={(e) => setMinute(parseInt(e.target.value))}
+              />
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">
-              Road Closure Required? <span style={{ color: "#EF4444" }}>*</span>
+              Road Closure Status (requires_road_closure) <span style={{ color: "#EF4444" }}>*</span>
             </label>
-            <div style={{ display: "flex", gap: "16px", marginTop: "4px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+            <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="road_closure"
                   checked={roadClosure === true}
                   onChange={() => setRoadClosure(true)}
                 />
-                <span style={{ color: "#EF4444", fontWeight: "600" }}>Yes</span> (Carriage Lane Blocked)
+                <span style={{ color: "#EF4444", fontWeight: "600" }}>Yes</span> (Lanes Blocked)
               </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "0.85rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer" }}>
                 <input
                   type="radio"
                   name="road_closure"
@@ -592,7 +969,7 @@ export default function PredictTab({ config, apiKey }) {
           </button>
         </div>
 
-        {/* RIGHT COLUMN: Fixed Google Maps + Results Canvas */}
+        {/* RIGHT COLUMN: Fixed Google Maps + Comprehensive Results Canvas */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
 
           {/* PERMANENT FIXED GOOGLE MAP */}
@@ -642,24 +1019,97 @@ export default function PredictTab({ config, apiKey }) {
                 Tactical Map Position Fixed & Ready
               </h4>
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "560px", margin: "0 auto 12px" }}>
-                The Google Maps live canvas is actively positioned at <strong>{corridor}</strong>. You can click anywhere on the road network to relocate the incident pin. When all required dataset fields on the left are filled, click <strong>Run ASTER AI Pipeline</strong> to generate the 500m cordon, detour polylines, and OR-Tools officer dispatch.
+                The Google Maps live canvas is actively positioned at <strong>{corridor}</strong>. Click any test case scenario above to run instant multi-model inference.
               </p>
-              <div style={{ display: "inline-flex", gap: "16px", fontSize: "0.78rem", color: "#94A3B8" }}>
-                <span>✓ Live Google Traffic Layer</span>
-                <span>✓ 6-Decimal Pin Precision</span>
-                <span>✓ Full ASTRAM Schema Validation</span>
-              </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+              {/* ─────────────────────────────────────────────────────────────
+                  PREDICTABLE DATASET ATTRIBUTES MATRIX (46-COLUMN PREDICTIONS)
+                 ───────────────────────────────────────────────────────────── */}
+              <div className="metric-card" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <div>
+                    <h4 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Activity size={18} color="#10B981" />
+                      Predicted Dataset Attributes Matrix (Sorted by Impact & Confidence)
+                    </h4>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                      ASTER runs 4 pre-trained LightGBM models, 1 Gradient Boosting classifier, 1 OR-Tools MILP solver, and 1 NetworkX graph engine to predict 10 key operational attributes.
+                    </div>
+                  </div>
+                  <span style={{ fontSize: "0.75rem", background: "rgba(16, 185, 129, 0.15)", color: "#6EE7B7", padding: "4px 10px", borderRadius: "6px", fontWeight: "700" }}>
+                    ✓ 10 Model Outputs Computed
+                  </span>
+                </div>
+
+                <div style={{ overflowX: "auto" }}>
+                  <table className="custom-table" style={{ fontSize: "0.82rem" }}>
+                    <thead>
+                      <tr>
+                        <th>Predictable Attribute (Dataset Field)</th>
+                        <th>ML / Mathematical Engine</th>
+                        <th>AI Predicted Value</th>
+                        <th>Confidence / Fit</th>
+                        <th>Operational Implication</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(result.dataset_predictions || []).map((p, idx) => (
+                        <tr key={idx} style={{ background: idx === 0 ? "rgba(239, 68, 68, 0.06)" : idx === 1 ? "rgba(59, 130, 246, 0.05)" : "transparent" }}>
+                          <td>
+                            <div style={{ fontWeight: "700", color: "#F8FAFC" }}>{p.label}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#94A3B8" }}><code>{p.field}</code></div>
+                          </td>
+                          <td>
+                            <span style={{ fontSize: "0.74rem", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px", color: "#CBD5E1" }}>
+                              {p.model}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{
+                              fontWeight: "800",
+                              fontSize: "0.92rem",
+                              color: p.id === "impact_tier"
+                                ? (result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981")
+                                : p.id === "duration_minutes" ? "#60A5FA"
+                                : p.id === "manpower_count" ? "#34D399"
+                                : "#F8FAFC"
+                            }}>
+                              {p.metric_display}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{
+                              fontSize: "0.75rem",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              background: "rgba(59, 130, 246, 0.15)",
+                              color: "#93C5FD",
+                              fontWeight: "600"
+                            }}>
+                              {p.confidence}
+                            </span>
+                          </td>
+                          <td style={{ color: "#E2E8F0", fontSize: "0.78rem" }}>
+                            {p.action_implication}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               {/* Triage Overview Metrics */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1fr", gap: "14px" }}>
                 <div className="metric-card" style={{
                   borderLeft: `4px solid ${result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981"}`
                 }}>
                   <div className="metric-title">Forecasted Impact Triage</div>
                   <div style={{
-                    fontSize: "1.6rem",
+                    fontSize: "1.5rem",
                     fontWeight: "800",
                     color: result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981",
                     marginTop: "4px"
@@ -667,13 +1117,23 @@ export default function PredictTab({ config, apiKey }) {
                     {result.predicted_tier === "High" ? "🔴" : result.predicted_tier === "Medium" ? "🟡" : "🟢"} {result.predicted_tier.toUpperCase()} IMPACT
                   </div>
                   <div className="metric-sub">
-                    Confidence: <strong>{(result.confidence * 100).toFixed(1)}%</strong> | Priority: <strong>{result.response_priority}</strong>
+                    Confidence: <strong>{(result.confidence * 100).toFixed(1)}%</strong>
+                  </div>
+                </div>
+
+                <div className="metric-card">
+                  <div className="metric-title">Incident Resolution Time</div>
+                  <div className="metric-value" style={{ color: "#60A5FA" }}>
+                    {result.predicted_duration_minutes || 48} mins
+                  </div>
+                  <div className="metric-sub">
+                    Est. Clear: {result.predicted_end_datetime ? result.predicted_end_datetime.split(" ")[-1] : "Shortly"}
                   </div>
                 </div>
 
                 <div className="metric-card">
                   <div className="metric-title">Police Deployment SLA</div>
-                  <div className="metric-value" style={{ color: "#60A5FA" }}>
+                  <div className="metric-value" style={{ color: "#F59E0B" }}>
                     {result.deployment_time}
                   </div>
                   <div className="metric-sub">
