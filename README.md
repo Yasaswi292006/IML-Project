@@ -10,7 +10,7 @@
 **Team:** ASTER Intelligence  
 **Theme:** Event-Driven Congestion (Planned & Unplanned)  
 **City:** Bengaluru, Karnataka  
-**Dataset:** 8,173 real traffic events · Nov 2023 – Apr 2024 (ASTRAM system)
+**Dataset:** 8,173 real traffic events · Nov 2025 – Apr 2026 (ASTRAM system)
 
 ---
 
@@ -49,6 +49,18 @@ ASTER is a **traffic intelligence decision-support system** that:
 python >= 3.10
 pip install -r requirements.txt
 ```
+
+### Environment Setup
+Copy the template environment configuration file and provide your Google Maps API key:
+```bash
+cp .env.example .env
+```
+Open `.env` and set:
+```ini
+GOOGLE_MAPS_API=AIzaSyYourGoogleMapsApiKeyHere
+GOOGLE_MAPS_API_KEY=AIzaSyYourGoogleMapsApiKeyHere
+```
+*(Maps JavaScript API, Places API, and Geocoding API are enabled for live traffic layers, tactical cordons, and address search).*
 
 ### Step 1 — Train the model
 ```bash
@@ -180,7 +192,7 @@ aster/
 3. **Night logging spike (0–5 AM)** — Patrol officers log overnight incidents at shift start. Timestamp normalisation needed for real-time use.
 4. **Peak hour concentration** — Evening peak (5–9 PM) shows 23% higher High-impact rate than off-peak.
 5. **Accidents close fastest** — 40 min median despite high disruption. Emergency protocols work.
-6. **March 2024 peak** — Highest event month (1,929 events) coincides with pre-summer construction season.
+6. **March 2026 peak** — Highest event month (1,929 events) coincides with pre-summer construction season.
 
 ---
 
@@ -375,7 +387,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 
 *Then it generates a response plan. Not a generic alert — a specific plan. For a water logging event on ORR East at 9 AM, it tells you: 4 officers, heavy barricading, mandatory diversion, deploy within 5 minutes, alert BBMP drainage cell, avoid the underpass at Marathahalli.*
 
-*We validated this on 8,173 real events across Nov 2023 to April 2024. The operational architecture is transparent about its assumptions — the target variable is derived from operational signals, not arbitrary labels. The recommendation engine is grounded in BTP SOP logic.*
+*We validated this on 8,173 real events across Nov 2025 to April 2026. The operational architecture is transparent about its assumptions — the target variable is derived from operational signals, not arbitrary labels. The recommendation engine is grounded in BTP SOP logic.*
 
 *The system features a high-performance React tactical command center backed by FastAPI, designed for direct integration with ASTRAM's API. The model artefacts are saved and portable. The only dependency is event metadata that BTP already captures.*
 
@@ -412,7 +424,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 |------------|-----------|
 | Impact tier derived from operational signals | No ground-truth severity labels in dataset; scoring is auditable and consistent with BTP practice |
 | Bengaluru-centric spatial normalisation | Model trained and tested on Bengaluru coordinates only |
-| Static training data | No live signal integration; reflects Nov 2023 – Apr 2024 patterns |
+| Static training data | No live signal integration; reflects Nov 2025 – Apr 2026 patterns |
 | Overnight timestamp spike = logging lag | 0–5 AM volume reflects officer behaviour, not actual midnight events |
 | Monsoon not fully covered | June–September underrepresented in training period |
 
