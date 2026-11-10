@@ -7,6 +7,29 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def get_google_maps_api_key() -> str:
+    """Retrieve Google Maps API key from environment or .env file."""
+    api_key = os.getenv("GOOGLE_MAPS_API")
+    if not api_key:
+        env_file = os.path.join(ROOT, ".env")
+        if os.path.exists(env_file):
+            try:
+                from dotenv import load_dotenv
+                load_dotenv(env_file)
+                api_key = os.getenv("GOOGLE_MAPS_API")
+            except Exception:
+                # Direct fallback parse if dotenv is not available
+                try:
+                    with open(env_file, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.strip().startswith("GOOGLE_MAPS_API="):
+                                api_key = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
+                                break
+                except Exception:
+                    pass
+    return api_key or ""
+
+
 def data_path(filename: str = "bengaluru_traffic_events.csv") -> str:
     return os.path.join(ROOT, "data", filename)
 

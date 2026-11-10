@@ -56,11 +56,18 @@ python train.py
 ```
 This runs the full pipeline and saves all model artefacts to `models/`.
 
-### Step 2 — Launch the demo app
+### Step 2 — Launch the Command Center
 ```bash
-streamlit run app/aster_app.py
+# Option A — Unified Production Server (FastAPI + compiled React SPA)
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
-Open `http://localhost:8501` in your browser.
+Open `http://localhost:8000` in your browser.
+
+```bash
+# Option B — React Vite Development Server
+cd frontend && npm run dev
+```
+Open `http://localhost:5173` in your browser.
 
 ### Step 3 — Test inference via CLI
 ```bash
@@ -101,8 +108,16 @@ aster/
 │   └── utils/
 │       └── config.py                  # Constants, colour maps, corridor lists
 │
-├── app/
-│   └── aster_app.py                   # Streamlit demo (4 pages)
+├── backend/
+│   └── main.py                        # FastAPI REST API serving inference & static React SPA
+│
+├── frontend/                          # React + Vite Tactical Command Center
+│   ├── src/
+│   │   ├── components/                # GoogleMapComponent, OverviewTab, PredictTab, etc.
+│   │   ├── App.jsx                    # Command Center dashboard shell
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
 │
 ├── models/                            # Generated after train.py
 │   ├── gb_main.pkl
@@ -362,7 +377,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 
 *We validated this on 8,173 real events across Nov 2023 to April 2024. The model is honest about its assumptions — the target variable is derived from operational signals, not arbitrary labels. The recommendation engine is grounded in BTP SOP logic.*
 
-*The system is Streamlit-based today, but it's designed for direct integration with ASTRAM's API. The model artefacts are saved and portable. The only dependency is event metadata that BTP already captures.*
+*The system features a high-performance React tactical command center backed by FastAPI, designed for direct integration with ASTRAM's API. The model artefacts are saved and portable. The only dependency is event metadata that BTP already captures.*
 
 *ASTER is not a research demo. It's a production-ready decision layer for Bengaluru's traffic operations."*
 
@@ -372,7 +387,7 @@ Model comparison table, confusion matrix, feature importance chart, classificati
 |-----------|---------------------------|
 | **Ground-Truth Target** | Learns from real `Time-to-Resolution` duration, not a synthetic formula |
 | **Real-Time Context** | Live weather API hook automatically escalates tier in adverse conditions |
-| **Closed Learning Loop** | Native Streamlit UI to log officer feedback directly into next month's training data |
+| **Closed Learning Loop** | Interactive UI to log officer feedback directly into next month's training data |
 | **Resource Optimization** | Hard station-capacity limits prevent impossible manpower deployments |
 | **Honest engineering** | Prevents data leakage; target construction is transparent |
 | **Operational realism** | Cause-specific actions, peak-hour escalation, BTP corridor awareness |

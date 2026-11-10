@@ -20,6 +20,10 @@ streamlit_utf8.log
 # Scratch / throwaway scripts
 scratch/
 
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+
 # Environments
 .env
 .venv
