@@ -419,35 +419,68 @@ export default function PreEventTab({ config, apiKey }) {
     handleSimulate();
   }, []);
 
-  // Save Pre-Event to ASTRAM Database
+  // Save & Publish Pre-Event to Operations Database & Live Dashboard
   const handleSaveToDatabase = async () => {
-    if (!simulationResult?.astram_record) {
+    let currentSim = simulationResult;
+    if (!currentSim?.astram_record) {
       await handleSimulate();
+      currentSim = simulationResult;
     }
-    const recordToSave = simulationResult?.astram_record;
-    if (!recordToSave) return;
+    const recordToSave = currentSim?.astram_record;
 
     setSaveLoading(true);
     try {
-      const resp = await fetch("http://127.0.0.1:8000/api/pre-event/save", {
+      const fullPlanPayload = {
+        id: eventId || `ASTRAM-PLAN-${Date.now()}`,
+        title: `${cause === "public_event" ? "🏏" : cause === "vip_movement" ? "🚗" : cause === "procession" ? "🎪" : "📅"} ${eventType || "Planned Event"} — ${corridor}`,
+        event_type: eventType,
+        event_cause: cause,
+        description: description,
+        corridor: corridor,
+        police_station: policeStation,
+        junction: junction,
+        zone: zone,
+        gba_identifier: gbaIdentifier,
+        address: address,
+        latitude: lat,
+        longitude: lng,
+        endlatitude: endLat,
+        endlongitude: endLng,
+        start_datetime: `${startDate}T${startTime}:00`,
+        end_datetime: `${endDate}T${endTime}:00`,
+        crowd_size: parseInt(crowdSize) || 20000,
+        priority: priority,
+        effective_tier: currentSim?.effective_tier || priority || "High",
+        road_closure: roadClosure,
+        allocated_officers: currentSim?.allocated_officers || 14,
+        buffer_radius: currentSim?.buffer_radius || "1,500m",
+        barricades: currentSim?.barricades || [],
+        routes: currentSim?.routes || [],
+        allocations: currentSim?.allocations || [],
+        tactical_checklist: currentSim?.tactical_checklist || [],
+        broadcast_advisories: currentSim?.broadcast_advisories || {},
+        astram_record: recordToSave || {}
+      };
+
+      const resp = await fetch("http://127.0.0.1:8000/api/pre-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(recordToSave)
+        body: JSON.stringify(fullPlanPayload)
       });
 
       if (!resp.ok) {
         const errJson = await resp.json();
-        throw new Error(errJson.detail || "Failed to commit record.");
+        throw new Error(errJson.detail || "Failed to publish pre-event.");
       }
 
       const resData = await resp.json();
       setSaveToast({
-        title: "✅ Record Committed to ASTRAM Database!",
-        message: `${resData.message} Total records in system: ${resData.total_events_now}`
+        title: "🚀 Pre-Event Live on Operations Dashboard!",
+        message: `${resData.message} Plan and execution details now live in operational bulletin.`
       });
-      setTimeout(() => setSaveToast(null), 5000);
+      setTimeout(() => setSaveToast(null), 6000);
     } catch (err) {
-      alert(`Database Save Error: ${err.message}`);
+      alert(`Database Publish Error: ${err.message}`);
     } finally {
       setSaveLoading(false);
     }
@@ -1320,7 +1353,7 @@ export default function PreEventTab({ config, apiKey }) {
               onClick={handleSaveToDatabase}
               disabled={saveLoading}
             >
-              <Save size={16} /> {saveLoading ? "Committing..." : "Commit to ASTRAM Database"}
+              <Save size={16} /> {saveLoading ? "Publishing Live..." : "Publish Live to Dashboard & Database"}
             </button>
 
             <button

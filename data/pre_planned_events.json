@@ -1,0 +1,149 @@
+[
+  {
+    "id": "ASTRAM-PLAN-IPL-2026",
+    "title": "\ud83c\udfcf IPL T20 Cricket Match \u2014 M. Chinnaswamy Stadium",
+    "event_type": "IPL Cricket Match",
+    "event_cause": "public_event",
+    "description": "IPL T20 match at M. Chinnaswamy Stadium with 35,000 spectators requiring multi-corridor transit cordons and shuttle channels.",
+    "corridor": "CBD 2",
+    "police_station": "Cubbon Park",
+    "junction": "QueensCircle",
+    "zone": "Central Zone 1",
+    "gba_identifier": "Bengaluru Central Corporation",
+    "address": "M. Chinnaswamy Stadium, MG Road, Bengaluru, Karnataka",
+    "latitude": 12.978835,
+    "longitude": 77.599537,
+    "endlatitude": 12.9815,
+    "endlongitude": 77.605,
+    "start_datetime": "2026-03-25T16:00:00",
+    "end_datetime": "2026-03-25T23:30:00",
+    "crowd_size": 35000,
+    "priority": "High",
+    "effective_tier": "High",
+    "road_closure": true,
+    "allocated_officers": 16,
+    "buffer_radius": "1,500m",
+    "barricades": [
+      {
+        "name": "Queens Circle East",
+        "road": "Queen's Road",
+        "lat": 12.9795,
+        "lng": 77.5998,
+        "reason": "Pedestrian Cordon Only"
+      },
+      {
+        "name": "Cubbon Road Cross",
+        "road": "Cubbon Road",
+        "lat": 12.9815,
+        "lng": 77.605,
+        "reason": "Buses & Metro Shuttle Priority"
+      }
+    ],
+    "routes": [
+      {
+        "corridor": "MG Road Bypass",
+        "strategy": "Channel traffic via Kasturba Road and Infantry Road"
+      }
+    ],
+    "allocations": [
+      {
+        "junction": "QueensCircle",
+        "allocated_officers": 6,
+        "latitude": 12.9788,
+        "longitude": 77.5995
+      },
+      {
+        "junction": "AnilKumbleCircle",
+        "allocated_officers": 4,
+        "latitude": 12.9754,
+        "longitude": 77.6067
+      },
+      {
+        "junction": "BRV_Junction",
+        "allocated_officers": 6,
+        "latitude": 12.9812,
+        "longitude": 77.6015
+      }
+    ],
+    "tactical_checklist": [
+      "Confirm green corridor for BMTC shuttle buses from MG Road Metro",
+      "Deploy 4 AFAD automated flaggers at Queen's Circle",
+      "Synchronize VMS highway advisory boards 3 hours prior"
+    ],
+    "broadcast_advisories": {
+      "whatsapp": "\ud83d\udea8 BTP ALERT: IPL Match at Chinnaswamy. Queen's Road restricted. Park at Cubbon Park / take Metro.",
+      "vms": "CHINNASWAMY MATCH - USE METRO / DIVERT VIA INFANTRY RD",
+      "twitter": "BTP Traffic Advisory: Pedestrian cordon active around Chinnaswamy Stadium from 16:00 to 23:30."
+    },
+    "status": "live",
+    "created_at": "2026-03-12T10:00:00"
+  },
+  {
+    "id": "ASTRAM-PLAN-MARATHON-2026",
+    "title": "\ud83c\udfc3 Bengaluru Midnight 21K Marathon",
+    "event_type": "Bengaluru Midnight Marathon",
+    "event_cause": "public_event",
+    "description": "Annual 21K city marathon route starting from ITPL Whitefield corridor to KTPO Complex.",
+    "corridor": "Varthur Road",
+    "police_station": "Whitefield",
+    "junction": "SonyWorldJunction",
+    "zone": "East Zone 2",
+    "gba_identifier": "BBMP Mahadevapura Zone",
+    "address": "ITPL Main Road near Whitefield Club, Bengaluru, Karnataka",
+    "latitude": 12.985,
+    "longitude": 77.728,
+    "endlatitude": 12.975,
+    "endlongitude": 77.715,
+    "start_datetime": "2026-03-01T22:00:00",
+    "end_datetime": "2026-03-02T04:00:00",
+    "crowd_size": 15000,
+    "priority": "High",
+    "effective_tier": "High",
+    "road_closure": true,
+    "allocated_officers": 12,
+    "buffer_radius": "2,000m",
+    "barricades": [
+      {
+        "name": "ITPL Main Gate Cordon",
+        "road": "ITPL Main Road",
+        "lat": 12.9855,
+        "lng": 77.7285,
+        "reason": "Athletes Running Corridor"
+      }
+    ],
+    "routes": [
+      {
+        "corridor": "HAL Old Airport Diversion",
+        "strategy": "Freights rerouted via Outer Ring Road East"
+      }
+    ],
+    "allocations": [
+      {
+        "junction": "HopeFarmJunction",
+        "allocated_officers": 6,
+        "latitude": 12.9842,
+        "longitude": 77.7512
+      },
+      {
+        "junction": "ITPL_Main_Gate",
+        "allocated_officers": 6,
+        "latitude": 12.985,
+        "longitude": 77.728
+      }
+    ],
+    "tactical_checklist": [
+      "Barricade eastern slow lane for marathon runners from 22:00 to 04:00",
+      "Maintain outer ring road freight diversion",
+      "Emergency paramedic ambulance staged at KTPO grounds"
+    ],
+    "broadcast_advisories": {
+      "whatsapp": "\ud83c\udfc3 BTP ADVISORY: Bengaluru Midnight Marathon on ITPL corridor. Commercial freight diverted.",
+      "vms": "WHITEFIELD MARATHON - DIVERSION VIA ORR EAST",
+      "twitter": "Whitefield corridor active marathon cordons until 04:00. Use HAL Airport road bypass."
+    },
+    "status": "completed",
+    "created_at": "2026-02-25T11:00:00",
+    "completed_at": "2026-03-02T04:15:00",
+    "concluded_by": "BTP Whitefield Sector Command"
+  }
+]

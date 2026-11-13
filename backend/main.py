@@ -4,6 +4,7 @@ import json
 import joblib
 import io
 import csv
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from typing import Optional, List, Dict, Any
@@ -414,6 +415,26 @@ def search_places(q: str):
     return results[:8]
 
 
+PRE_EVENTS_DB_PATH = os.path.join(DATA_DIR, "pre_planned_events.json")
+
+def load_pre_events_db() -> List[Dict[str, Any]]:
+    if not os.path.exists(PRE_EVENTS_DB_PATH):
+        return []
+    try:
+        with open(PRE_EVENTS_DB_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading pre-events database: {e}")
+        return []
+
+def save_pre_events_db(events: List[Dict[str, Any]]):
+    try:
+        with open(PRE_EVENTS_DB_PATH, "w", encoding="utf-8") as f:
+            json.dump(events, f, indent=2)
+    except Exception as e:
+        print(f"Error saving pre-events database: {e}")
+
+
 @app.get("/api/overview")
 def get_overview():
     total_events = len(df_events) if df_events is not None else 8173
@@ -421,17 +442,25 @@ def get_overview():
     closures = int((df_events["requires_road_closure"].astype(str).str.lower().isin(["true", "1", "yes"])).sum()) if df_events is not None else 676
     active_corridors = len(df_events["corridor"].unique()) if df_events is not None else 21
     
+    all_pre = load_pre_events_db()
+    live_pre = [e for e in all_pre if e.get("status") == "live"]
+    completed_pre = [e for e in all_pre if e.get("status") == "completed"]
+
     return {
         "metrics": {
             "total_events": total_events,
             "high_impact": high_impact,
             "high_impact_pct": round((high_impact / total_events) * 100, 1),
-            "planned_events": 467,
+            "planned_events": 467 + len(all_pre),
             "road_closures": closures,
             "active_corridors": active_corridors,
             "median_resolution_min": 65,
-            "date_range": "Nov 2025 – Apr 2026"
+            "date_range": "Nov 2025 – Apr 2026",
+            "live_pre_events_count": len(live_pre),
+            "prior_conducted_count": len(completed_pre)
         },
+        "live_pre_events": live_pre,
+        "completed_pre_events": completed_pre,
         "impact_distribution": [
             {"tier": "High", "count": high_impact, "pct": round(high_impact / total_events * 100, 1), "color": "#B91C1C"},
             {"tier": "Medium", "count": int(total_events * 0.44), "pct": 44.0, "color": "#D97706"},
@@ -1523,6 +1552,99 @@ def save_pre_event(record: Dict[str, Any]):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save record to ASTRAM database: {str(e)}")
+
+
+@app.get("/api/pre-events")
+def list_pre_events(status: Optional[str] = None):
+    """
+    Returns pre-planned events from database filtered by status ('live', 'completed', or 'all').
+    """
+    events = load_pre_events_db()
+    if status and status != "all":
+        events = [e for e in events if e.get("status") == status]
+    return events
+
+
+@app.post("/api/pre-events")
+def create_pre_event(payload: Dict[str, Any]):
+    """
+    Publishes a new planned pre-event live to the operational database and dashboard.
+    """
+    events = load_pre_events_db()
+    
+    evt_id = payload.get("id") or f"ASTRAM-PLAN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    payload["id"] = evt_id
+    payload["status"] = "live"
+    payload["created_at"] = payload.get("created_at") or datetime.now().isoformat()
+    payload["completed_at"] = None
+    payload["concluded_by"] = None
+
+    # Replace if ID exists, or prepend as top live event
+    existing_idx = next((i for i, e in enumerate(events) if e.get("id") == evt_id), None)
+    if existing_idx is not None:
+        events[existing_idx] = payload
+    else:
+        events.insert(0, payload)
+
+    save_pre_events_db(events)
+
+    # If astram_record is provided, also commit into processed and raw CSVs
+    record = payload.get("astram_record")
+    if record and isinstance(record, dict) and "id" in record:
+        try:
+            save_pre_event(record)
+        except Exception as e:
+            print(f"Warning: Failed to save astram_record: {e}")
+
+    live_count = len([e for e in events if e.get("status") == "live"])
+    return {
+        "status": "success",
+        "message": f"Pre-event '{payload.get('title', evt_id)}' is now LIVE on the Operations Dashboard.",
+        "event": payload,
+        "live_count": live_count
+    }
+
+
+@app.post("/api/pre-events/{event_id}/conclude")
+def conclude_pre_event(event_id: str, conclusion_data: Optional[Dict[str, Any]] = None):
+    """
+    Concludes an event, closes its live notification on the dashboard,
+    and registers it permanently into the Priorly Conducted Events archive.
+    """
+    events = load_pre_events_db()
+    target_event = None
+    for e in events:
+        if e.get("id") == event_id:
+            target_event = e
+            break
+
+    if not target_event:
+        raise HTTPException(status_code=404, detail=f"Pre-event with ID '{event_id}' not found.")
+
+    target_event["status"] = "completed"
+    target_event["completed_at"] = datetime.now().isoformat()
+    target_event["concluded_by"] = (conclusion_data or {}).get("concluded_by", "BTP Sector Command Controller")
+    target_event["execution_notes"] = (conclusion_data or {}).get("notes", "Operation successfully executed and concluded according to plan.")
+
+    save_pre_events_db(events)
+
+    live_remaining = len([e for e in events if e.get("status") == "live"])
+    return {
+        "status": "success",
+        "message": f"Pre-event '{target_event.get('title', event_id)}' has been concluded, closed from live bulletin, and registered in Priorly Conducted Events.",
+        "event": target_event,
+        "remaining_live": live_remaining
+    }
+
+
+@app.delete("/api/pre-events/{event_id}")
+def delete_pre_event(event_id: str):
+    events = load_pre_events_db()
+    filtered = [e for e in events if e.get("id") != event_id]
+    if len(filtered) == len(events):
+        raise HTTPException(status_code=404, detail=f"Pre-event with ID '{event_id}' not found.")
+    save_pre_events_db(filtered)
+    return {"status": "success", "message": f"Pre-event '{event_id}' deleted."}
 
 
 @app.get("/api/model-performance")
