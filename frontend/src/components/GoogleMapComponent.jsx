@@ -16,27 +16,30 @@ const DARK_TACTICAL_STYLE = [
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
 ];
 
+const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 };
+const EMPTY_ARRAY = [];
+
 export default function GoogleMapComponent({
   apiKey,
-  center = { lat: 12.9716, lng: 77.5946 },
+  center = DEFAULT_CENTER,
   zoom = 11,
-  events = [],
+  events = EMPTY_ARRAY,
   incident = null,
-  barricades = [],
-  routes = [],
-  allocations = [],
+  barricades = EMPTY_ARRAY,
+  routes = EMPTY_ARRAY,
+  allocations = EMPTY_ARRAY,
   mode = "density",
   height = "520px",
   onLocationSelect = null
 }) {
   const mapRef = useRef(null);
   const tacticalObjectsRef = useRef([]);
+  const densityObjectsRef = useRef([]);
+  const onLocationSelectRef = useRef(onLocationSelect);
   const [mapInstance, setMapInstance] = useState(null);
   const [trafficLayer, setTrafficLayer] = useState(null);
   const [showTraffic, setShowTraffic] = useState(true);
   const [showHotspots, setShowHotspots] = useState(true);
-  const [circles, setCircles] = useState([]);
-  const [markers, setMarkers] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authError, setAuthError] = useState(false);
 
@@ -272,7 +275,22 @@ export default function GoogleMapComponent({
     } catch (err) {
       console.error("Map initialization failed", err);
     }
-  }, [isLoaded, center, zoom]);
+  }, [isLoaded, center?.lat, center?.lng, zoom]);
+
+  // Keep latest onLocationSelect callback in ref to prevent listener thrashing
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
+
+  // Cleanup map overlays on unmount
+  useEffect(() => {
+    return () => {
+      densityObjectsRef.current.forEach((obj) => obj.setMap(null));
+      densityObjectsRef.current = [];
+      tacticalObjectsRef.current.forEach((obj) => obj.setMap(null));
+      tacticalObjectsRef.current = [];
+    };
+  }, []);
 
   // 3. Traffic Layer Toggle
   useEffect(() => {
@@ -286,17 +304,14 @@ export default function GoogleMapComponent({
     if (!mapInstance || mode !== "density" || !window.google) return;
 
     // Clear previous
-    circles.forEach(c => c.setMap(null));
-    markers.forEach(m => m.setMap(null));
+    densityObjectsRef.current.forEach(c => c.setMap(null));
+    densityObjectsRef.current = [];
 
     if (!showHotspots) {
-      setCircles([]);
-      setMarkers([]);
       return;
     }
 
-    const newCircles = [];
-    const newMarkers = [];
+    const newObjects = [];
     const infoWindow = new window.google.maps.InfoWindow();
 
     // Render density circles
@@ -317,7 +332,7 @@ export default function GoogleMapComponent({
         strokeWeight: 1,
         map: mapInstance
       });
-      newCircles.push(circle);
+      newObjects.push(circle);
     });
 
     // Render top 25 high impact clickable pins
@@ -350,18 +365,18 @@ export default function GoogleMapComponent({
         `);
         infoWindow.open(mapInstance, marker);
       });
-      newMarkers.push(marker);
+      newObjects.push(marker);
     });
 
-    setCircles(newCircles);
-    setMarkers(newMarkers);
+    densityObjectsRef.current = newObjects;
   }, [mapInstance, mode, events, showHotspots]);
 
   // 4b. Location Click Listener with Geocoding
   useEffect(() => {
-    if (!mapInstance || !onLocationSelect || !window.google) return;
+    if (!mapInstance || !window.google) return;
 
     const listener = mapInstance.addListener("click", (e) => {
+      if (!onLocationSelectRef.current) return;
       const clickedLat = parseFloat(e.latLng.lat().toFixed(6));
       const clickedLng = parseFloat(e.latLng.lng().toFixed(6));
 
@@ -374,11 +389,13 @@ export default function GoogleMapComponent({
             if (status === "OK" && results && results[0]) {
               googleAddress = results[0].formatted_address;
             }
-            onLocationSelect({
-              lat: clickedLat,
-              lng: clickedLng,
-              googleAddress
-            });
+            if (onLocationSelectRef.current) {
+              onLocationSelectRef.current({
+                lat: clickedLat,
+                lng: clickedLng,
+                googleAddress
+              });
+            }
           });
           return;
         }
@@ -386,10 +403,12 @@ export default function GoogleMapComponent({
         console.warn("Geocoder error:", err);
       }
 
-      onLocationSelect({
-        lat: clickedLat,
-        lng: clickedLng
-      });
+      if (onLocationSelectRef.current) {
+        onLocationSelectRef.current({
+          lat: clickedLat,
+          lng: clickedLng
+        });
+      }
     });
 
     return () => {
@@ -397,7 +416,7 @@ export default function GoogleMapComponent({
         window.google.maps.event.removeListener(listener);
       }
     };
-  }, [mapInstance, onLocationSelect]);
+  }, [mapInstance]);
 
   // 5. Render Tactical Dispatch Mode Overlays
   useEffect(() => {
@@ -531,7 +550,7 @@ export default function GoogleMapComponent({
       tacticalObjectsRef.current.push(offMarker);
     });
 
-  }, [mapInstance, mode, incident, barricades, routes, allocations]);
+  }, [mapInstance, mode, incident?.lat, incident?.lng, incident?.tier, incident?.cause, incident?.corridor, barricades, routes, allocations]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: height, borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(59,130,246,0.3)" }}>

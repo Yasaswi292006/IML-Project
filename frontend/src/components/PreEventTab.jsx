@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar, Users, Shield, MapPin, CheckSquare, Search, Download, Copy,
   Check, Save, AlertTriangle, Layers, Navigation, ArrowRight, Clock,
@@ -294,7 +294,7 @@ export default function PreEventTab({ config, apiKey }) {
   };
 
   // Map Click / Search location selection handler
-  const handleLocationSelect = async ({ lat: newLat, lng: newLng, googleAddress }) => {
+  const handleLocationSelect = useCallback(async ({ lat: newLat, lng: newLng, googleAddress }) => {
     if (pinMode === "end") {
       setEndLat(newLat);
       setEndLng(newLng);
@@ -345,7 +345,7 @@ export default function PreEventTab({ config, apiKey }) {
       console.error("Location lookup error:", err);
       if (googleAddress) setAddress(googleAddress);
     }
-  };
+  }, [pinMode, lat, lng, endLat, endLng]);
 
   // Run Pre-Event Response Plan & Audit
   const handleSimulate = async () => {
@@ -479,6 +479,17 @@ export default function PreEventTab({ config, apiKey }) {
     setCopyStatus(`Copied ${type}!`);
     setTimeout(() => setCopyStatus(null), 2500);
   };
+
+  const mapCenter = useMemo(() => ({ lat, lng }), [lat, lng]);
+  const mapIncident = useMemo(() => ({
+    lat,
+    lng,
+    tier: simulationResult?.effective_tier || "High",
+    cause,
+    corridor
+  }), [lat, lng, simulationResult?.effective_tier, cause, corridor]);
+  const mapBarricades = useMemo(() => simulationResult?.barricades || [], [simulationResult?.barricades]);
+  const mapRoutes = useMemo(() => simulationResult?.routes || [], [simulationResult?.routes]);
 
   return (
     <div style={{ maxWidth: "1500px", margin: "0 auto", paddingBottom: "60px", display: "flex", flexDirection: "column", gap: "28px" }}>
@@ -671,17 +682,12 @@ export default function PreEventTab({ config, apiKey }) {
 
         <GoogleMapComponent
           apiKey={apiKey}
-          center={{ lat, lng }}
+          center={mapCenter}
           zoom={13}
-          incident={{
-            lat: lat,
-            lng: lng,
-            tier: simulationResult?.effective_tier || "High",
-            cause: cause,
-            corridor: corridor
-          }}
-          barricades={simulationResult?.barricades || []}
-          routes={simulationResult?.routes || []}
+          mode="tactical"
+          incident={mapIncident}
+          barricades={mapBarricades}
+          routes={mapRoutes}
           height="460px"
           onLocationSelect={handleLocationSelect}
         />
