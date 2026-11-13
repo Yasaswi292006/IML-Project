@@ -19,7 +19,6 @@ import {
   Server,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronRight,
   ExternalLink
 } from 'lucide-react';
 import OverviewTab from './components/OverviewTab';
@@ -255,34 +254,6 @@ export default function App() {
 
         {/* Main Content Area: Renders Dedicated Page Routes */}
         <main className="main-content">
-          {/* Government Portal Breadcrumb Banner */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "18px",
-            padding: "8px 14px",
-            background: "rgba(15, 23, 42, 0.45)",
-            border: "1px solid rgba(255, 255, 255, 0.05)",
-            borderRadius: "8px",
-            fontSize: "0.76rem",
-            color: "var(--text-muted)"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span>Government of Karnataka</span>
-              <ChevronRight size={12} />
-              <span>Bengaluru Traffic Police (BTP)</span>
-              <ChevronRight size={12} />
-              <span style={{ color: "#93C5FD", fontWeight: "600" }}>{currentPage.title}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: "monospace", color: "#64748B" }}>
-              <span>URL:</span>
-              <code style={{ color: "#38BDF8", background: "rgba(56, 189, 248, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
-                {currentPath}
-              </code>
-            </div>
-          </div>
-
           <Routes>
             {/* Page 1: Overview */}
             <Route
