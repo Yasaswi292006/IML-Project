@@ -3,7 +3,7 @@ import {
   AlertCircle, Shield, Navigation, Users, Share2, CheckCircle2,
   ChevronRight, Copy, MapPin, Calendar, Clock, AlertTriangle, RotateCcw,
   Sparkles, Layers, ArrowRight, Activity, Zap, Check, Compass, Sliders,
-  Minimize2, Maximize2
+  Minimize2, Maximize2, Eye, EyeOff
 } from 'lucide-react';
 import GoogleMapComponent, { isInBengaluru, BENGALURU_BOUNDS } from './GoogleMapComponent';
 
@@ -445,32 +445,242 @@ export default function PredictTab({ config, apiKey }) {
     "HebbalFlyover", "RichmondCircle", "TinFactoryJunc", "GoraguntepalyaJunc"
   ];
 
+  // Shared Incident Form Renderer for both Split View (2-column inputs) and Wide View (multi-column grid)
+  const renderIncidentForm = (isWide = false) => (
+    <div className="metric-card" style={{ padding: "18px 20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "10px" }}>
+        <h3 style={{ fontSize: "0.98rem", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+          <span>🚨</span> ASTRAM Incident Parameters
+        </h3>
+        <button
+          onClick={handleReset}
+          style={{
+            background: "transparent",
+            border: "1px solid rgba(148, 163, 184, 0.2)",
+            color: "var(--text-muted)",
+            borderRadius: "6px",
+            padding: "4px 8px",
+            fontSize: "0.74rem",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px"
+          }}
+          title="Reset form fields to defaults"
+        >
+          <RotateCcw size={12} /> Reset
+        </button>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: isWide ? "repeat(auto-fit, minmax(210px, 1fr))" : "1fr 1fr",
+        gap: "10px"
+      }}>
+        {/* Corridor */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Arterial Corridor <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={corridor} onChange={(e) => handleCorridorChange(e.target.value)}>
+            {corridorsList.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Disruption Cause */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Disruption Cause <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={cause} onChange={(e) => setCause(e.target.value)}>
+            {causesList.map((c) => (
+              <option key={c.key} value={c.key}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Priority Tier */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Priority Tier <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={priority} onChange={(e) => setPriority(e.target.value)}>
+            <option value="High">🔴 High Priority</option>
+            <option value="Medium">🟡 Medium Priority</option>
+            <option value="Low">🟢 Low Priority</option>
+          </select>
+        </div>
+
+        {/* Vehicle Involved */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Vehicle Involved <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={vehType} onChange={(e) => setVehType(e.target.value)}>
+            {vehicleTypesList.map((v) => (
+              <option key={v.key} value={v.key}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Police Station */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Police Jurisdiction <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={policeStation} onChange={(e) => setPoliceStation(e.target.value)}>
+            {stationsList.map((s) => (
+              <option key={s} value={s}>{s} Traffic PS</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Junction / Chokepoint */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Junction / Chokepoint <span style={{ color: "#EF4444" }}>*</span></label>
+          <select className="form-select" value={junction} onChange={(e) => setJunction(e.target.value)}>
+            {junctionsList.map((j) => (
+              <option key={j} value={j}>{j}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Admin Zone */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Admin Zone <span style={{ color: "#EF4444" }}>*</span></label>
+          <input type="text" className="form-select" value={zone} onChange={(e) => setZone(e.target.value)} placeholder="e.g. South Zone 1" />
+        </div>
+
+        {/* Incident Address */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Address / Landmark <span style={{ color: "#EF4444" }}>*</span></label>
+          <input type="text" className="form-select" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. Hosur Road near Silk Board" />
+        </div>
+
+        {/* Latitude */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Latitude (WGS84) <span style={{ color: "#EF4444" }}>*</span></label>
+          <input type="number" step="0.000001" className="form-select" value={lat} onChange={(e) => setLat(parseFloat(e.target.value))} />
+        </div>
+
+        {/* Longitude */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Longitude (WGS84) <span style={{ color: "#EF4444" }}>*</span></label>
+          <input type="number" step="0.000001" className="form-select" value={lng} onChange={(e) => setLng(parseFloat(e.target.value))} />
+        </div>
+
+        {/* Date */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Date <span style={{ color: "#EF4444" }}>*</span></label>
+          <input type="date" className="form-select" value={dateStr} onChange={(e) => setDateStr(e.target.value)} />
+        </div>
+
+        {/* Time */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Time (Hour : Min) <span style={{ color: "#EF4444" }}>*</span></label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+            <input type="number" min="0" max="23" className="form-select" value={hour} onChange={(e) => setHour(parseInt(e.target.value))} placeholder="HH" />
+            <input type="number" min="0" max="59" className="form-select" value={minute} onChange={(e) => setMinute(parseInt(e.target.value))} placeholder="MM" />
+          </div>
+        </div>
+
+        {/* Road Closure */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Road Closure (Lanes Blocked)</label>
+          <div style={{ display: "flex", gap: "14px", marginTop: "6px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", cursor: "pointer" }}>
+              <input type="radio" name="road_closure" checked={roadClosure === true} onChange={() => setRoadClosure(true)} />
+              <span style={{ color: "#EF4444", fontWeight: "700" }}>Yes</span>
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "0.82rem", cursor: "pointer" }}>
+              <input type="radio" name="road_closure" checked={roadClosure === false} onChange={() => setRoadClosure(false)} />
+              <span style={{ color: "#10B981", fontWeight: "700" }}>No</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Weather Multiplier */}
+        <div className="form-group" style={{ margin: 0 }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Weather Condition</label>
+          <select className="form-select" value={weatherMultiplier} onChange={(e) => setWeatherMultiplier(parseFloat(e.target.value))}>
+            <option value="1.0">☀️ Normal (1.0x)</option>
+            <option value="1.25">🌧️ Rain (1.25x)</option>
+            <option value="1.6">⛈️ Heavy (1.6x)</option>
+          </select>
+        </div>
+
+        {/* Description / Notes */}
+        <div className="form-group" style={{ margin: 0, gridColumn: isWide ? "span 2" : "span 2" }}>
+          <label className="form-label" style={{ fontSize: "0.76rem" }}>Incident Description / Notes <span style={{ color: "#EF4444" }}>*</span></label>
+          <input
+            type="text"
+            className="form-select"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. 3-vehicle pileup blocking center lanes"
+          />
+        </div>
+      </div>
+
+      {/* Out of Bengaluru warning */}
+      {!isInBengaluru(lat, lng) && (
+        <div style={{
+          background: "rgba(239, 68, 68, 0.15)",
+          border: "1px solid #EF4444",
+          borderRadius: "8px",
+          padding: "8px 12px",
+          marginTop: "10px",
+          fontSize: "0.78rem",
+          color: "#FCA5A5",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px"
+        }}>
+          <AlertTriangle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
+          <span>⛔ Coordinates outside Bengaluru limits. Response prediction disabled.</span>
+        </div>
+      )}
+
+      {/* Submit Button */}
+      <button
+        className="btn-primary"
+        style={{
+          width: "100%",
+          marginTop: "12px",
+          padding: "10px",
+          fontSize: "0.92rem",
+          opacity: !isInBengaluru(lat, lng) ? 0.55 : 1,
+          cursor: !isInBengaluru(lat, lng) ? "not-allowed" : "pointer"
+        }}
+        onClick={handlePredict}
+        disabled={loading || !isInBengaluru(lat, lng)}
+      >
+        {!isInBengaluru(lat, lng) ? "⛔ Disabled — Out of Bengaluru Limits" : loading ? "Computing ASTER AI Pipeline..." : "⚡ Run ASTER AI Pipeline"}
+      </button>
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: "1550px", margin: "0 auto", paddingBottom: "60px" }}>
 
       {/* ─────────────────────────────────────────────────────────────
-          1. PRESET SCENARIO SELECTOR (Dropdown Underneath Heading)
+          1. TOP BAR: Scenario Selector & Map Layout Mode Switcher
          ───────────────────────────────────────────────────────────── */}
       <div style={{
-        background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))",
+        background: "linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.95))",
         border: "1px solid rgba(59, 130, 246, 0.35)",
         borderRadius: "14px",
         padding: "16px 22px",
-        marginBottom: "24px",
+        marginBottom: "20px",
         boxShadow: "0 10px 25px rgba(0,0,0,0.4)"
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div>
-            <h2 style={{ fontSize: "1.15rem", fontWeight: "800", color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>⚡</span> Tactical Scenario Test Cases & Model Validation
-            </h2>
-          </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+          
+          {/* Left: Heading & Scenario Dropdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", flex: "1 1 500px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "1.3rem" }}>⚡</span>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: "800", color: "#F8FAFC", margin: 0, whiteSpace: "nowrap" }}>
+                Predict & Respond
+              </h2>
+            </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-            <label style={{ fontSize: "0.84rem", fontWeight: "600", color: "#93C5FD", display: "flex", alignItems: "center", gap: "6px" }}>
-              <span>Select Pre-Designed Scenario:</span>
-            </label>
-            <div style={{ position: "relative", minWidth: "320px", maxWidth: "560px", flex: "1 1 340px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "300px" }}>
+              <label style={{ fontSize: "0.82rem", fontWeight: "700", color: "#93C5FD", whiteSpace: "nowrap" }}>
+                Scenario:
+              </label>
               <select
                 className="form-select"
                 value={activePresetId || ""}
@@ -479,9 +689,9 @@ export default function PredictTab({ config, apiKey }) {
                   if (tc) applyPresetTestCase(tc);
                 }}
                 style={{
-                  width: "100%",
-                  padding: "9px 14px",
-                  fontSize: "0.88rem",
+                  flex: 1,
+                  padding: "8px 12px",
+                  fontSize: "0.85rem",
                   fontWeight: "600",
                   borderRadius: "8px",
                   background: "rgba(15, 23, 42, 0.95)",
@@ -499,6 +709,32 @@ export default function PredictTab({ config, apiKey }) {
               </select>
             </div>
           </div>
+
+          {/* Right: Layout & Map Visibility Toggle */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => setMapCollapsed(prev => !prev)}
+              style={{
+                background: !mapCollapsed ? "rgba(59, 130, 246, 0.25)" : "rgba(30, 41, 59, 0.8)",
+                border: !mapCollapsed ? "1px solid #3B82F6" : "1px solid rgba(148, 163, 184, 0.3)",
+                color: !mapCollapsed ? "#60A5FA" : "var(--text-secondary)",
+                borderRadius: "8px",
+                padding: "8px 16px",
+                fontSize: "0.82rem",
+                fontWeight: "700",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              }}
+              title={mapCollapsed ? "Show Tactical Google Map side-by-side with parameters" : "Hide Map to give full screen width to results"}
+            >
+              <Navigation size={15} color={!mapCollapsed ? "#60A5FA" : "#94A3B8"} />
+              <span>{!mapCollapsed ? "🗺️ Map Open (Side-by-Side)" : "🗺️ Show Tactical Map"}</span>
+            </button>
+          </div>
+
         </div>
       </div>
 
@@ -581,347 +817,93 @@ export default function PredictTab({ config, apiKey }) {
         </div>
       )}
 
-      {/* Main 2-Column Command Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 420px) minmax(0, 1fr)", gap: "24px", alignItems: "start" }}>
-
-        {/* LEFT COLUMN: All Required Dataset Fields Form */}
-        <div className="metric-card" style={{ padding: "20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "12px" }}>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-              <span>🚨</span> ASTRAM Dataset Incident Entry
-            </h3>
-            <button
-              onClick={handleReset}
-              style={{
-                background: "transparent",
-                border: "1px solid rgba(148, 163, 184, 0.2)",
-                color: "var(--text-muted)",
-                borderRadius: "6px",
-                padding: "4px 8px",
-                fontSize: "0.75rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                cursor: "pointer"
-              }}
-              title="Reset fields to BTP default template"
-            >
-              <RotateCcw size={12} /> Reset
-            </button>
-          </div>
-
-          {/* Section 1: Core Incident Identifiers */}
-          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "10px" }}>
-            1. Core Incident Identifiers
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Arterial Corridor <span style={{ color: "#EF4444" }}>*</span>
-            </label>
-            <select
-              className="form-select"
-              value={corridor}
-              onChange={(e) => handleCorridorChange(e.target.value)}
-            >
-              {corridorsList.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="form-group">
-              <label className="form-label">
-                Disruption Cause <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={cause}
-                onChange={(e) => setCause(e.target.value)}
-              >
-                {causesList.map((c) => (
-                  <option key={c.key} value={c.key}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Event Type <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={eventType}
-                onChange={(e) => setEventType(e.target.value)}
-              >
-                <option value="unplanned">Unplanned Disruption</option>
-                <option value="planned">Planned Special Event</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="form-group">
-              <label className="form-label">
-                Initial Priority <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-              >
-                <option value="High">🔴 High Priority (Emergency)</option>
-                <option value="Medium">🟡 Medium Priority (Congestion)</option>
-                <option value="Low">🟢 Low Priority (Minor / Shoulder)</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Vehicle Involved <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={vehType}
-                onChange={(e) => setVehType(e.target.value)}
-              >
-                {vehicleTypesList.map((v) => (
-                  <option key={v.key} value={v.key}>{v.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Section 2: Jurisdictional & Spatial Identifiers */}
-          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "16px", marginBottom: "10px" }}>
-            2. Jurisdictional & Spatial Identifiers
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Police Station Jurisdiction <span style={{ color: "#EF4444" }}>*</span>
-            </label>
-            <select
-              className="form-select"
-              value={policeStation}
-              onChange={(e) => setPoliceStation(e.target.value)}
-            >
-              {stationsList.map((s) => (
-                <option key={s} value={s}>{s} Traffic Police Station</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="form-group">
-              <label className="form-label">
-                Junction / Chokepoint <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <select
-                className="form-select"
-                value={junction}
-                onChange={(e) => setJunction(e.target.value)}
-              >
-                {junctionsList.map((j) => (
-                  <option key={j} value={j}>{j}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                Administrative Zone <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <input
-                type="text"
-                className="form-select"
-                value={zone}
-                onChange={(e) => setZone(e.target.value)}
-                placeholder="e.g. South Zone 1"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Incident Address / Landmark <span style={{ color: "#EF4444" }}>*</span>
-            </label>
-            <input
-              type="text"
-              className="form-select"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g. Hosur Road near Silk Board, Bengaluru"
-            />
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="form-group">
-              <label className="form-label">
-                Latitude (WGS84) <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                className="form-select"
-                value={lat}
-                onChange={(e) => setLat(parseFloat(e.target.value))}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                Longitude (WGS84) <span style={{ color: "#EF4444" }}>*</span>
-              </label>
-              <input
-                type="number"
-                step="0.000001"
-                className="form-select"
-                value={lng}
-                onChange={(e) => setLng(parseFloat(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {!isInBengaluru(lat, lng) && (
+      {/* ─────────────────────────────────────────────────────────────
+          2. INSTANT EXECUTIVE KPI TRIAGE RIBBON (Always visible when result is ready!)
+         ───────────────────────────────────────────────────────────── */}
+      {result && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+          gap: "14px",
+          marginBottom: "20px"
+        }}>
+          {/* Card 1: Forecasted Impact Triage */}
+          <div className="metric-card" style={{
+            borderLeft: `4px solid ${result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D"}`,
+            padding: "14px 18px"
+          }}>
+            <div className="metric-title" style={{ fontSize: "0.74rem" }}>FORECASTED IMPACT TRIAGE</div>
             <div style={{
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid #EF4444",
-              borderRadius: "8px",
-              padding: "8px 12px",
-              marginTop: "4px",
-              marginBottom: "12px",
-              fontSize: "0.78rem",
-              color: "#FCA5A5",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px"
+              fontSize: "1.35rem",
+              fontWeight: "800",
+              color: result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D",
+              marginTop: "4px"
             }}>
-              <AlertTriangle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
-              <span>⛔ Coordinates are outside Bengaluru City limits (BTP Perimeter). Response prediction is disabled.</span>
+              {result.predicted_tier === "High" ? "🔴" : result.predicted_tier === "Medium" ? "🟡" : "🟢"} {result.predicted_tier?.toUpperCase()} IMPACT
             </div>
-          )}
-
-          {/* Section 3: Temporal & Environmental Conditions */}
-          <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "16px", marginBottom: "10px" }}>
-            3. Temporal & Environmental Conditions
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: "10px" }}>
-            <div className="form-group">
-              <label className="form-label">Date</label>
-              <input
-                type="date"
-                className="form-select"
-                value={dateStr}
-                onChange={(e) => setDateStr(e.target.value)}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Hour (0-23)</label>
-              <input
-                type="number"
-                min="0"
-                max="23"
-                className="form-select"
-                value={hour}
-                onChange={(e) => setHour(parseInt(e.target.value))}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Minute</label>
-              <input
-                type="number"
-                min="0"
-                max="59"
-                className="form-select"
-                value={minute}
-                onChange={(e) => setMinute(parseInt(e.target.value))}
-              />
+            <div className="metric-sub" style={{ marginTop: "4px" }}>
+              Confidence: <strong>{(result.confidence * 100).toFixed(1)}%</strong> • Priority: <strong>{priority}</strong>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Road Closure Status (requires_road_closure) <span style={{ color: "#EF4444" }}>*</span>
-            </label>
-            <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  name="road_closure"
-                  checked={roadClosure === true}
-                  onChange={() => setRoadClosure(true)}
-                />
-                <span style={{ color: "#EF4444", fontWeight: "600" }}>Yes</span> (Lanes Blocked)
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer" }}>
-                <input
-                  type="radio"
-                  name="road_closure"
-                  checked={roadClosure === false}
-                  onChange={() => setRoadClosure(false)}
-                />
-                <span style={{ color: "#10B981", fontWeight: "600" }}>No</span> (Shoulder / Minor Delay)
-              </label>
+          {/* Card 2: Incident Resolution Time */}
+          <div className="metric-card" style={{ borderLeft: "4px solid #60A5FA", padding: "14px 18px" }}>
+            <div className="metric-title" style={{ fontSize: "0.74rem" }}>INCIDENT RESOLUTION TIME</div>
+            <div className="metric-value" style={{ color: "#60A5FA", fontSize: "1.35rem" }}>
+              {result.predicted_duration_minutes || 48} mins
+            </div>
+            <div className="metric-sub" style={{ marginTop: "4px" }}>
+              Est. Clear: <strong>{result.predicted_end_datetime ? result.predicted_end_datetime.split(" ").slice(-1)[0] : "Shortly"}</strong>
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Weather Impact Condition</label>
-            <select
-              className="form-select"
-              value={weatherMultiplier}
-              onChange={(e) => setWeatherMultiplier(parseFloat(e.target.value))}
-            >
-              <option value="1.0">☀️ Normal / Dry Surface (1.0x)</option>
-              <option value="1.25">🌧️ Light Rain / Wet Road (1.25x)</option>
-              <option value="1.6">⛈️ Heavy Monsoon / Waterlogged (1.6x)</option>
-            </select>
+          {/* Card 3: Police Deployment SLA & Officers */}
+          <div className="metric-card" style={{ borderLeft: "4px solid #34D399", padding: "14px 18px" }}>
+            <div className="metric-title" style={{ fontSize: "0.74rem" }}>POLICE DEPLOYMENT (MILP)</div>
+            <div className="metric-value" style={{ color: "#34D399", fontSize: "1.35rem" }}>
+              {result.officers_deployed} Officers Active
+            </div>
+            <div className="metric-sub" style={{ marginTop: "4px" }}>
+              SLA: <strong>{result.deployment_time}</strong> • {policeStation} PS
+            </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Incident Description / Patrol Notes <span style={{ color: "#EF4444" }}>*</span>
-            </label>
-            <textarea
-              className="form-select"
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., BMTC bus broken down near bus bay, traffic slow moving."
-            />
+          {/* Card 4: Road Closure & Traffic Routing */}
+          <div className="metric-card" style={{ borderLeft: "4px solid #F59E0B", padding: "14px 18px" }}>
+            <div className="metric-title" style={{ fontSize: "0.74rem" }}>ROAD CLOSURE & DIVERSION</div>
+            <div className="metric-value" style={{ color: roadClosure ? "#EF4444" : "#10B981", fontSize: "1.35rem" }}>
+              {roadClosure ? "🚨 Lanes Blocked" : "✓ Minor / Shoulder"}
+            </div>
+            <div className="metric-sub" style={{ marginTop: "4px" }}>
+              {result.barricades?.length || 4} Barricades • {corridor} Cordon
+            </div>
           </div>
-
-          <button
-            className="btn-primary"
-            style={{
-              width: "100%",
-              marginTop: "14px",
-              padding: "12px",
-              fontSize: "0.95rem",
-              opacity: !isInBengaluru(lat, lng) ? 0.55 : 1,
-              cursor: !isInBengaluru(lat, lng) ? "not-allowed" : "pointer"
-            }}
-            onClick={handlePredict}
-            disabled={loading || !isInBengaluru(lat, lng)}
-          >
-            {!isInBengaluru(lat, lng) ? "⛔ Disabled — Out of Bengaluru Limits" : loading ? "Computing ASTER AI Pipeline..." : "⚡ Run ASTER AI Pipeline"}
-          </button>
         </div>
+      )}
 
-        {/* RIGHT COLUMN: Google Maps & Comprehensive Results Canvas */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
+      {/* ─────────────────────────────────────────────────────────────
+          3. SPATIAL & PARAMETERS WORKSPACE (WORKABLE IN BOTH MODES)
+         ───────────────────────────────────────────────────────────── */}
+      {!mapCollapsed ? (
+        /* ─── WHEN MAP IS OPEN: Side-by-Side 2-Column Split ─── */
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(380px, 460px) minmax(0, 1fr)",
+          gap: "20px",
+          alignItems: "start",
+          marginBottom: "24px"
+        }}>
+          {/* Left: Compact Incident Form */}
+          {renderIncidentForm(false)}
 
-          {/* TACTICAL GOOGLE MAP (In-Flow, Never Hovering) */}
+          {/* Right: Tactical Google Map */}
           <div className="map-card-container" style={{ position: "relative", zIndex: 1, marginBottom: 0 }}>
             <div className="map-header">
               <div className="map-header-title">
                 <Navigation size={18} color="#60A5FA" />
                 <span>
-                  Tactical Incident Map —{" "}
-                  <strong style={{ color: "#F8FAFC" }}>{corridor}</strong>
-                  {result?.nearest_junction && ` (Junction: ${result.nearest_junction})`}
+                  Tactical Incident Map — <strong style={{ color: "#F8FAFC" }}>{corridor}</strong>
+                  {result?.nearest_junction && ` (${result.nearest_junction})`}
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.78rem", flexWrap: "wrap" }}>
@@ -929,14 +911,14 @@ export default function PredictTab({ config, apiKey }) {
                   📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                 </span>
                 <span style={{ color: mapSyncLoading ? "#F59E0B" : "#38BDF8", fontWeight: "600" }}>
-                  {mapSyncLoading ? "⚡ Syncing form..." : "✨ Click map to auto-fill form"}
+                  {mapSyncLoading ? "⚡ Syncing..." : "✨ Click map to pin"}
                 </span>
                 <button
-                  onClick={() => setMapCollapsed(prev => !prev)}
+                  onClick={() => setMapCollapsed(true)}
                   style={{
-                    background: mapCollapsed ? "rgba(59, 130, 246, 0.25)" : "rgba(255, 255, 255, 0.08)",
-                    border: "1px solid rgba(59, 130, 246, 0.4)",
-                    color: mapCollapsed ? "#60A5FA" : "var(--text-secondary)",
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(148, 163, 184, 0.3)",
+                    color: "var(--text-secondary)",
                     borderRadius: "6px",
                     padding: "4px 10px",
                     fontSize: "0.74rem",
@@ -946,78 +928,82 @@ export default function PredictTab({ config, apiKey }) {
                     gap: "5px",
                     cursor: "pointer"
                   }}
-                  title={mapCollapsed ? "Expand Tactical Map" : "Collapse Tactical Map to see full results below"}
+                  title="Collapse Tactical Map"
                 >
-                  {mapCollapsed ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                  {mapCollapsed ? "Expand Map" : "Collapse Map"}
+                  <Minimize2 size={13} /> Collapse Map
                 </button>
               </div>
             </div>
 
-            {!mapCollapsed ? (
-              <GoogleMapComponent
-                apiKey={apiKey}
-                incident={{
-                  lat: parseFloat(lat),
-                  lng: parseFloat(lng),
-                  tier: result?.predicted_tier || null
-                }}
-                barricades={result?.barricades || []}
-                routes={result?.routes || []}
-                allocations={result?.allocations || []}
-                mode="tactical"
-                height="420px"
-                onLocationSelect={handleLocationSelect}
-              />
-            ) : (
-              <div style={{
-                padding: "14px 20px",
-                background: "rgba(15, 23, 42, 0.6)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
+            <GoogleMapComponent
+              apiKey={apiKey}
+              incident={{
+                lat: parseFloat(lat),
+                lng: parseFloat(lng),
+                tier: result?.predicted_tier || null
+              }}
+              barricades={result?.barricades || []}
+              routes={result?.routes || []}
+              allocations={result?.allocations || []}
+              mode="tactical"
+              height="450px"
+              onLocationSelect={handleLocationSelect}
+            />
+          </div>
+        </div>
+      ) : (
+        /* ─── WHEN MAP IS NOT OPEN (Map Collapsed / Results Focus) ─── */
+        <div style={{ marginBottom: "24px" }}>
+          {/* Minimized map strip with restore button */}
+          <div style={{
+            background: "rgba(15, 23, 42, 0.75)",
+            border: "1px dashed rgba(59, 130, 246, 0.4)",
+            borderRadius: "10px",
+            padding: "12px 20px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "16px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <MapPin size={18} color="#60A5FA" />
+              <span style={{ fontSize: "0.85rem", color: "#F8FAFC" }}>
+                Tactical Map Minimized • Active Location: <strong>{address || corridor}</strong> ({lat.toFixed(5)}, {lng.toFixed(5)})
+              </span>
+            </div>
+            <button
+              onClick={() => setMapCollapsed(false)}
+              style={{
+                background: "rgba(59, 130, 246, 0.2)",
+                border: "1px solid #3B82F6",
+                color: "#93C5FD",
+                borderRadius: "6px",
+                padding: "6px 14px",
                 fontSize: "0.82rem",
-                color: "var(--text-muted)"
-              }}>
-                <span>
-                  Tactical map collapsed. Full screen dedicated to predicted results below.
-                </span>
-                <button
-                  onClick={() => setMapCollapsed(false)}
-                  style={{
-                    background: "rgba(59, 130, 246, 0.2)",
-                    border: "1px solid rgba(59, 130, 246, 0.4)",
-                    color: "#93C5FD",
-                    padding: "4px 12px",
-                    borderRadius: "6px",
-                    fontSize: "0.76rem",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Expand Map
-                </button>
-              </div>
-            )}
+                fontWeight: "700",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <Maximize2 size={14} /> Open Tactical Map
+            </button>
           </div>
 
-          {/* BELOW MAP: Real-Time AI Results or Readiness Guide */}
-          {!result ? (
-            <div className="metric-card" style={{ padding: "28px 24px", textAlign: "center" }}>
-              <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "rgba(59,130,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                <MapPin size={24} color="#60A5FA" />
-              </div>
-              <h4 style={{ fontSize: "1.05rem", fontWeight: "700", color: "#F8FAFC", marginBottom: "6px" }}>
-                Tactical Map Position Fixed & Ready
-              </h4>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "560px", margin: "0 auto 12px" }}>
-                The Google Maps live canvas is actively positioned at <strong>{corridor}</strong>. Click any test case scenario above to run instant multi-model inference.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* Form in wide responsive grid */}
+          {renderIncidentForm(true)}
+        </div>
+      )}
 
-              {/* ─────────────────────────────────────────────────────────────
+      {/* ─────────────────────────────────────────────────────────────
+          4. DETAILED TACTICAL RESPONSE DASHBOARD (Full 100% Width!)
+         ───────────────────────────────────────────────────────────── */}
+      {result ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {/* ─────────────────────────────────────────────────────────────
                   PREDICTABLE DATASET ATTRIBUTES MATRIX (46-COLUMN PREDICTIONS)
                  ───────────────────────────────────────────────────────────── */}
               <div className="metric-card" style={{ padding: "20px" }}>
@@ -1091,56 +1077,6 @@ export default function PredictTab({ config, apiKey }) {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              </div>
-
-              {/* Triage Overview Metrics */}
-              <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1fr", gap: "14px" }}>
-                <div className="metric-card" style={{
-                  borderLeft: `4px solid ${result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D"}`
-                }}>
-                  <div className="metric-title">Forecasted Impact Triage</div>
-                  <div style={{
-                    fontSize: "1.5rem",
-                    fontWeight: "800",
-                    color: result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D",
-                    marginTop: "4px"
-                  }}>
-                    {result.predicted_tier === "High" ? "🔴" : result.predicted_tier === "Medium" ? "🟡" : "🟢"} {result.predicted_tier.toUpperCase()} IMPACT
-                  </div>
-                  <div className="metric-sub">
-                    Confidence: <strong>{(result.confidence * 100).toFixed(1)}%</strong>
-                  </div>
-                </div>
-
-                <div className="metric-card">
-                  <div className="metric-title">Incident Resolution Time</div>
-                  <div className="metric-value" style={{ color: "#60A5FA" }}>
-                    {result.predicted_duration_minutes || 48} mins
-                  </div>
-                  <div className="metric-sub">
-                    Est. Clear: {result.predicted_end_datetime ? result.predicted_end_datetime.split(" ")[-1] : "Shortly"}
-                  </div>
-                </div>
-
-                <div className="metric-card">
-                  <div className="metric-title">Police Deployment SLA</div>
-                  <div className="metric-value" style={{ color: "#F59E0B" }}>
-                    {result.deployment_time}
-                  </div>
-                  <div className="metric-sub">
-                    Target response SLA
-                  </div>
-                </div>
-
-                <div className="metric-card">
-                  <div className="metric-title">Optimized Officers</div>
-                  <div className="metric-value" style={{ color: "#3B82F6" }}>
-                    {result.officers_deployed} Active
-                  </div>
-                  <div className="metric-sub">
-                    MILP via Google OR-Tools
-                  </div>
                 </div>
               </div>
 
@@ -1279,10 +1215,18 @@ export default function PredictTab({ config, apiKey }) {
                   </div>
                 </div>
               )}
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        <div className="metric-card" style={{ padding: "32px", textAlign: "center" }}>
+          <Activity size={32} color="#60A5FA" style={{ margin: "0 auto 12px" }} />
+          <h4 style={{ fontSize: "1.05rem", fontWeight: "700", color: "#F8FAFC", marginBottom: "6px" }}>
+            Ready to Predict Incident Impact & Tactical Plan
+          </h4>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "560px", margin: "0 auto" }}>
+            Click "⚡ Run ASTER AI Pipeline" in the form above or pick a scenario from the dropdown to compute the 10-attribute forecast and BTP dispatch.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
