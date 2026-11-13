@@ -83,7 +83,7 @@ export default function App() {
   return (
     <div className="app-container">
       {/* ─────────────────────────────────────────────────────────────
-          1. TOP NAVIGATION BAR (Full width with ChatGPT-style toggle)
+          1. TOP NAVIGATION BAR (Clean header with toggle & branding only)
          ───────────────────────────────────────────────────────────── */}
       <header className="top-navbar">
         {/* Left: Sidebar Toggle + Brand Logo & Title */}
@@ -109,32 +109,6 @@ export default function App() {
                 Traffic AI
               </span>
             </div>
-          </div>
-        </div>
-
-        {/* Center: Top Navigation Bar Tabs */}
-        <div className="top-navbar-center">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                className={`top-navbar-tab ${isActive ? "active" : ""}`}
-                onClick={() => setActiveTab(item.id)}
-              >
-                <Icon size={15} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Right: Active Tab Indicator & Backend Status */}
-        <div className="top-navbar-right">
-          <div className="system-badge">
-            <div className="pulse-dot"></div>
-            <span>{connected ? "FastAPI Connected" : "Connecting..."}</span>
           </div>
         </div>
       </header>
@@ -194,6 +168,13 @@ export default function App() {
 
           {/* Sidebar Footer Metadata */}
           <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "14px", marginTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", background: "rgba(255,255,255,0.03)", padding: "6px 10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="pulse-dot"></div>
+              <span style={{ fontSize: "0.72rem", color: connected ? "#86EFAC" : "#FCA5A5", fontWeight: "600" }}>
+                {connected ? "FastAPI Connected" : "Connecting Backend..."}
+              </span>
+            </div>
+
             <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginBottom: "8px" }}>
               🗺️ <strong>Map Engine:</strong><br />
               <span style={{ color: "#86EFAC" }}>🟢 Google Maps (Live Traffic)</span>
