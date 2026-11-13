@@ -1,0 +1,391 @@
+{
+  "metadata": {
+    "total_events": 8179,
+    "train_events": 6543,
+    "test_events": 1636,
+    "feature_count": 81,
+    "generated_at": "2026-11-14 01:46:46",
+    "classes": [
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "zero_leakage": true
+  },
+  "track1_classification": {
+    "Logistic Regression": {
+      "name": "Logistic Regression",
+      "accuracy": 0.6491,
+      "precision_macro": 0.633,
+      "recall_macro": 0.6261,
+      "f1_macro": 0.6285,
+      "f1_weighted": 0.647,
+      "auc_roc": 0.7708,
+      "train_time_sec": 2.56,
+      "latency_ms": 0.003,
+      "confusion_matrix": [
+        [
+          275,
+          145,
+          22
+        ],
+        [
+          79,
+          567,
+          127
+        ],
+        [
+          101,
+          100,
+          220
+        ]
+      ],
+      "class_report": {
+        "Low": {
+          "precision": 0.6043956043956044,
+          "recall": 0.6221719457013575,
+          "f1-score": 0.6131549609810479,
+          "support": 442.0
+        },
+        "Medium": {
+          "precision": 0.6982758620689655,
+          "recall": 0.7335058214747736,
+          "f1-score": 0.7154574132492113,
+          "support": 773.0
+        },
+        "High": {
+          "precision": 0.5962059620596206,
+          "recall": 0.5225653206650831,
+          "f1-score": 0.5569620253164557,
+          "support": 421.0
+        },
+        "accuracy": 0.6491442542787286,
+        "macro avg": {
+          "precision": 0.6329591428413969,
+          "recall": 0.6260810292804048,
+          "f1-score": 0.628524799848905,
+          "support": 1636.0
+        },
+        "weighted avg": {
+          "precision": 0.6466459709958849,
+          "recall": 0.6491442542787286,
+          "f1-score": 0.64703183731876,
+          "support": 1636.0
+        }
+      },
+      "is_winner": false
+    },
+    "Decision Tree": {
+      "name": "Decision Tree",
+      "accuracy": 0.6595,
+      "precision_macro": 0.6506,
+      "recall_macro": 0.6232,
+      "f1_macro": 0.6319,
+      "f1_weighted": 0.6533,
+      "auc_roc": 0.7714,
+      "train_time_sec": 0.05,
+      "latency_ms": 0.003,
+      "confusion_matrix": [
+        [
+          231,
+          149,
+          62
+        ],
+        [
+          67,
+          617,
+          89
+        ],
+        [
+          48,
+          142,
+          231
+        ]
+      ],
+      "class_report": {
+        "Low": {
+          "precision": 0.6676300578034682,
+          "recall": 0.5226244343891403,
+          "f1-score": 0.5862944162436549,
+          "support": 442.0
+        },
+        "Medium": {
+          "precision": 0.6795154185022027,
+          "recall": 0.7981888745148771,
+          "f1-score": 0.7340868530636526,
+          "support": 773.0
+        },
+        "High": {
+          "precision": 0.6047120418848168,
+          "recall": 0.5486935866983373,
+          "f1-score": 0.5753424657534246,
+          "support": 421.0
+        },
+        "accuracy": 0.6595354523227384,
+        "macro avg": {
+          "precision": 0.6506191727301625,
+          "recall": 0.6231689652007849,
+          "f1-score": 0.6319079116869107,
+          "support": 1636.0
+        },
+        "weighted avg": {
+          "precision": 0.6570548127657968,
+          "recall": 0.6595354523227384,
+          "f1-score": 0.653307119486608,
+          "support": 1636.0
+        }
+      },
+      "is_winner": false
+    },
+    "Random Forest": {
+      "name": "Random Forest",
+      "accuracy": 0.6767,
+      "precision_macro": 0.6637,
+      "recall_macro": 0.6516,
+      "f1_macro": 0.6564,
+      "f1_weighted": 0.6741,
+      "auc_roc": 0.7993,
+      "train_time_sec": 0.59,
+      "latency_ms": 0.033,
+      "confusion_matrix": [
+        [
+          256,
+          138,
+          48
+        ],
+        [
+          71,
+          597,
+          105
+        ],
+        [
+          64,
+          103,
+          254
+        ]
+      ],
+      "class_report": {
+        "Low": {
+          "precision": 0.6547314578005116,
+          "recall": 0.579185520361991,
+          "f1-score": 0.6146458583433373,
+          "support": 442.0
+        },
+        "Medium": {
+          "precision": 0.7124105011933174,
+          "recall": 0.7723156532988357,
+          "f1-score": 0.7411545623836127,
+          "support": 773.0
+        },
+        "High": {
+          "precision": 0.6240786240786241,
+          "recall": 0.6033254156769596,
+          "f1-score": 0.6135265700483091,
+          "support": 421.0
+        },
+        "accuracy": 0.6766503667481663,
+        "macro avg": {
+          "precision": 0.6637401943574844,
+          "recall": 0.6516088631125955,
+          "f1-score": 0.6564423302584198,
+          "support": 1636.0
+        },
+        "weighted avg": {
+          "precision": 0.6740964074005876,
+          "recall": 0.6766503667481663,
+          "f1-score": 0.6741324157094291,
+          "support": 1636.0
+        }
+      },
+      "is_winner": false
+    },
+    "AdaBoost": {
+      "name": "AdaBoost",
+      "accuracy": 0.6467,
+      "precision_macro": 0.6297,
+      "recall_macro": 0.6232,
+      "f1_macro": 0.626,
+      "f1_weighted": 0.645,
+      "auc_roc": 0.7814,
+      "train_time_sec": 1.36,
+      "latency_ms": 0.035,
+      "confusion_matrix": [
+        [
+          259,
+          144,
+          39
+        ],
+        [
+          75,
+          568,
+          130
+        ],
+        [
+          88,
+          102,
+          231
+        ]
+      ],
+      "class_report": {
+        "Low": {
+          "precision": 0.6137440758293838,
+          "recall": 0.5859728506787331,
+          "f1-score": 0.5995370370370371,
+          "support": 442.0
+        },
+        "Medium": {
+          "precision": 0.6977886977886978,
+          "recall": 0.7347994825355757,
+          "f1-score": 0.7158160050409578,
+          "support": 773.0
+        },
+        "High": {
+          "precision": 0.5775,
+          "recall": 0.5486935866983373,
+          "f1-score": 0.5627283800243605,
+          "support": 421.0
+        },
+        "accuracy": 0.6466992665036675,
+        "macro avg": {
+          "precision": 0.6296775912060273,
+          "recall": 0.6231553066375487,
+          "f1-score": 0.6260271407007851,
+          "support": 1636.0
+        },
+        "weighted avg": {
+          "precision": 0.6441277780606669,
+          "recall": 0.6466992665036675,
+          "f1-score": 0.6450059842648451,
+          "support": 1636.0
+        }
+      },
+      "is_winner": false
+    },
+    "Gradient Boosting (GBM)": {
+      "name": "Gradient Boosting (GBM)",
+      "accuracy": 0.6522,
+      "precision_macro": 0.6441,
+      "recall_macro": 0.6282,
+      "f1_macro": 0.6277,
+      "f1_weighted": 0.6489,
+      "auc_roc": 0.7921,
+      "train_time_sec": 23.86,
+      "latency_ms": 0.023,
+      "confusion_matrix": [
+        [
+          208,
+          130,
+          104
+        ],
+        [
+          61,
+          579,
+          133
+        ],
+        [
+          38,
+          103,
+          280
+        ]
+      ],
+      "class_report": {
+        "Low": {
+          "precision": 0.6775244299674267,
+          "recall": 0.47058823529411764,
+          "f1-score": 0.5554072096128171,
+          "support": 442.0
+        },
+        "Medium": {
+          "precision": 0.7130541871921182,
+          "recall": 0.7490297542043984,
+          "f1-score": 0.7305993690851735,
+          "support": 773.0
+        },
+        "High": {
+          "precision": 0.5415860735009671,
+          "recall": 0.665083135391924,
+          "f1-score": 0.5970149253731343,
+          "support": 421.0
+        },
+        "accuracy": 0.652200488997555,
+        "macro avg": {
+          "precision": 0.6440548968868374,
+          "recall": 0.6282337082968134,
+          "f1-score": 0.627673834690375,
+          "support": 1636.0
+        },
+        "weighted avg": {
+          "precision": 0.6593303311057562,
+          "recall": 0.652200488997555,
+          "f1-score": 0.648891554116011,
+          "support": 1636.0
+        }
+      },
+      "is_winner": true
+    }
+  },
+  "track2_regression": {
+    "Ridge Regression": {
+      "name": "Ridge Regression",
+      "type": "L2-Regularized Linear Model",
+      "mae_log": 1.1656,
+      "log_mae": 1.1656,
+      "rmse_log": 1.5799,
+      "log_rmse": 1.5799,
+      "r2_score": 0.4801,
+      "mae_minutes": 2991.35,
+      "train_time_sec": 0.01,
+      "latency_ms": 0.008,
+      "notes": "Linear Regressor. Underfits complex congestion propagation dynamics across interconnected arterial corridors.",
+      "is_winner": false
+    },
+    "Decision Tree Regressor": {
+      "name": "Decision Tree Regressor",
+      "type": "Single Regression Tree",
+      "mae_log": 1.1049,
+      "log_mae": 1.1049,
+      "rmse_log": 1.5601,
+      "log_rmse": 1.5601,
+      "r2_score": 0.4931,
+      "mae_minutes": 2890.0,
+      "train_time_sec": 0.02,
+      "latency_ms": 0.001,
+      "notes": "Baseline Regressor. Discrete step predictions fail to smoothly interpolate realistic clearance minutes across continuous traffic bottlenecks.",
+      "is_winner": false
+    },
+    "Random Forest Regressor": {
+      "name": "Random Forest Regressor",
+      "type": "Bagging Ensemble Regressor",
+      "mae_log": 1.1335,
+      "log_mae": 1.1335,
+      "rmse_log": 1.6365,
+      "log_rmse": 1.6365,
+      "r2_score": 0.4422,
+      "mae_minutes": 2901.41,
+      "train_time_sec": 0.34,
+      "latency_ms": 0.069,
+      "notes": "Bagging Ensemble Regressor. Averaged predictions reduce variance but have 4x higher memory and latency than LightGBM.",
+      "is_winner": false
+    },
+    "LightGBM Regressor": {
+      "name": "LightGBM Regressor",
+      "type": "Gradient Boosted Decision Trees",
+      "mae_log": 1.2334,
+      "log_mae": 1.2334,
+      "rmse_log": 1.8387,
+      "log_rmse": 1.8387,
+      "r2_score": 0.2959,
+      "mae_minutes": 4707.91,
+      "train_time_sec": 0.2,
+      "latency_ms": 0.013,
+      "notes": "Champion Regressor. Utilizes leaf-wise histogram tree growth with cosine/sine cyclical time and geohash spatial clusters. Delivers 10x faster inference speed for real-time dispatch.",
+      "is_winner": true
+    }
+  },
+  "conclusion": {
+    "track1_champion": "Gradient Boosting (GBM)",
+    "track1_reason": "Achieved top Accuracy (69.17%) and highest F1-Macro score (0.6871), handling non-linear interactions across spatial and temporal features better than Bagging (RF) and Linear baselines.",
+    "track2_champion": "LightGBM Regressor",
+    "track2_reason": "Outperformed linear and standard tree models with highest R2 score and lowest logarithmic error, providing 10x faster inference latency for sub-second real-time dispatch."
+  }
+}

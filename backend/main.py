@@ -216,11 +216,52 @@ class PredictRequest(BaseModel):
     weather_multiplier: Optional[float] = 1.0
 
 
+# ─────────────────────────────────────────────────────────────
+# Bengaluru Metropolitan Area & BTP Jurisdiction Limits
+# ─────────────────────────────────────────────────────────────
+BENGALURU_LIMITS = {
+    "min_lat": 12.7300,
+    "max_lat": 13.2500,
+    "min_lng": 77.3700,
+    "max_lng": 77.8200,
+    "name": "Bengaluru Metropolitan Area (BTP Jurisdiction)",
+    "description": "Bengaluru Traffic Police (BTP) & BBMP Urban Operational Limits"
+}
+
+# Key perimeter polygon points outlining the Greater Bengaluru / BTP operational boundary
+BENGALURU_PERIMETER_POLYGON = [
+    {"lat": 13.2450, "lng": 77.7120},  # Devanahalli / KIA North-East
+    {"lat": 13.2380, "lng": 77.6050},  # Doddaballapur Cross / Yelahanka North
+    {"lat": 13.1650, "lng": 77.4650},  # Hesaraghatta / Nelamangala North
+    {"lat": 13.0600, "lng": 77.3800},  # Nelamangala Toll / NH-48 West
+    {"lat": 12.9650, "lng": 77.3950},  # Magadi Road Outer West / Tavarekere
+    {"lat": 12.8750, "lng": 77.4450},  # Kengeri / Bidadi / Mysore Road South-West
+    {"lat": 12.7850, "lng": 77.5100},  # Kanakapura Road / Kaggalipura South
+    {"lat": 12.7400, "lng": 77.5850},  # Bannerghatta / Jigani South
+    {"lat": 12.7550, "lng": 77.6950},  # Attibele / Hosur Road Border South-East
+    {"lat": 12.8350, "lng": 77.7750},  # Sarjapur Outer East
+    {"lat": 12.9550, "lng": 77.8100},  # Whitefield / Kadugodi / Hope Farm East
+    {"lat": 13.0750, "lng": 77.7950},  # Hoskote Junction / Old Madras Road East
+    {"lat": 13.1850, "lng": 77.7650},  # Budigere Cross / Devanahalli East
+    {"lat": 13.2450, "lng": 77.7120}   # Close loop
+]
+
+def is_in_bengaluru(lat: float, lng: float) -> bool:
+    """
+    Checks if a geographic coordinate falls within Bengaluru Traffic Police (BTP) jurisdiction.
+    Uses bounding box check with slight buffer.
+    """
+    return (BENGALURU_LIMITS["min_lat"] <= lat <= BENGALURU_LIMITS["max_lat"] and
+            BENGALURU_LIMITS["min_lng"] <= lng <= BENGALURU_LIMITS["max_lng"])
+
+
 @app.get("/api/config")
 def get_config():
     return {
         "google_maps_api_key": get_google_maps_api_key(),
         "city": "Bengaluru",
+        "bengaluru_limits": BENGALURU_LIMITS,
+        "bengaluru_perimeter_polygon": BENGALURU_PERIMETER_POLYGON,
         "corridors": CORRIDORS,
         "causes": CAUSES,
         "event_types": EVENT_TYPES,
@@ -236,6 +277,16 @@ def get_config():
 
 @app.get("/api/lookup-location")
 def lookup_location(lat: float, lng: float):
+    # 0. Jurisdiction Check: Must be within Bengaluru city limits
+    if not is_in_bengaluru(lat, lng):
+        return {
+            "in_bengaluru": False,
+            "error": "out_of_bounds",
+            "message": f"The selected location ({lat:.4f}, {lng:.4f}) is outside Bengaluru city limits. ASTER Traffic Intelligence and Bengaluru Traffic Police (BTP) only cater to the Bengaluru Metropolitan Area.",
+            "lat": round(lat, 6),
+            "lng": round(lng, 6),
+            "limits": BENGALURU_LIMITS
+        }
     # 1. Spatial distance against known corridor centers
     best_corridor = "Hosur Road"
     min_dist = float("inf")
@@ -300,6 +351,7 @@ def lookup_location(lat: float, lng: float):
         detected_address = detected_address.replace("(India)", "").strip().rstrip(".")
 
     return {
+        "in_bengaluru": True,
         "lat": round(lat, 6),
         "lng": round(lng, 6),
         "corridor": best_corridor,
@@ -520,6 +572,13 @@ def predict_incident(req: PredictRequest):
 
     lat = float(req.custom_lat) if req.custom_lat is not None else corridor_meta["lat"]
     lon = float(req.custom_lng) if req.custom_lng is not None else corridor_meta["lng"]
+
+    # Bengaluru City Limits Enforcement
+    if not is_in_bengaluru(lat, lon):
+        raise HTTPException(
+            status_code=400,
+            detail=f"The selected incident location ({lat:.4f}, {lon:.4f}) is outside Bengaluru city limits. ASTER operations and BTP tactical response only cater to the Bengaluru Metropolitan Area."
+        )
     zone = req.zone if req.zone else corridor_meta["zone"]
     police_station = req.police_station if req.police_station else corridor_meta["police_station"]
     junction = req.junction if req.junction else corridor_meta["junction"]
@@ -1244,6 +1303,19 @@ def plan_pre_event(req: PreEventPlanRequest):
     and returns a guaranteed 46-column ASTRAM-compliant data point.
     """
     global df_events
+
+    # 0. Bengaluru City Limits Jurisdiction Check
+    if not is_in_bengaluru(req.latitude, req.longitude):
+        raise HTTPException(
+            status_code=400,
+            detail=f"The selected venue location ({req.latitude:.4f}, {req.longitude:.4f}) is outside Bengaluru city limits. ASTER operations and BTP pre-event mitigation only cater to the Bengaluru Metropolitan Area."
+        )
+    if req.endlatitude and req.endlongitude and req.endlatitude != 0.0 and req.endlongitude != 0.0:
+        if not is_in_bengaluru(req.endlatitude, req.endlongitude):
+            raise HTTPException(
+                status_code=400,
+                detail=f"The route destination coordinate ({req.endlatitude:.4f}, {req.endlongitude:.4f}) is outside Bengaluru city limits. Both start and end points must be within BTP jurisdiction."
+            )
     
     # 1. Determine Event ID
     evt_id = req.id
@@ -1570,6 +1642,14 @@ def create_pre_event(payload: Dict[str, Any]):
     """
     Publishes a new planned pre-event live to the operational database and dashboard.
     """
+    evt_lat = float(payload.get("latitude", 0.0))
+    evt_lng = float(payload.get("longitude", 0.0))
+    if evt_lat != 0.0 and evt_lng != 0.0 and not is_in_bengaluru(evt_lat, evt_lng):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot publish operation outside Bengaluru limits ({evt_lat:.4f}, {evt_lng:.4f}). ASTER decision support only caters to the Bengaluru Metropolitan Area."
+        )
+
     events = load_pre_events_db()
     
     evt_id = payload.get("id") or f"ASTRAM-PLAN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -1650,12 +1730,18 @@ def delete_pre_event(event_id: str):
 @app.get("/api/model-performance")
 def get_model_performance():
     metrics_path = os.path.join(MODELS_DIR, "evaluation_metrics.json")
+    arena_path = os.path.join(MODELS_DIR, "model_comparison_arena.json")
     fi_path = os.path.join(MODELS_DIR, "feature_importance.csv")
     
     metrics = {}
     if os.path.exists(metrics_path):
         with open(metrics_path, "r") as f:
             metrics = json.load(f)
+
+    arena = {}
+    if os.path.exists(arena_path):
+        with open(arena_path, "r") as f:
+            arena = json.load(f)
             
     fi_list = []
     if os.path.exists(fi_path):
@@ -1664,6 +1750,7 @@ def get_model_performance():
 
     return {
         "metrics": metrics,
+        "arena": arena,
         "top_features": fi_list
     }
 

@@ -6,7 +6,7 @@ import {
   FileText, CheckCircle2, ChevronDown, ChevronUp, ChevronRight, Sliders, Radio, Sparkles,
   Car, Compass, RefreshCw, Send, AlertOctagon, Info, X, Database, Trash2, ExternalLink, Eye, Archive
 } from 'lucide-react';
-import GoogleMapComponent from './GoogleMapComponent';
+import GoogleMapComponent, { isInBengaluru, BENGALURU_BOUNDS } from './GoogleMapComponent';
 
 const PRESETS = [
   {
@@ -305,7 +305,17 @@ export default function PreEventTab({ config, apiKey }) {
   };
 
   // Map Click / Search location selection handler
-  const handleLocationSelect = useCallback(async ({ lat: newLat, lng: newLng, googleAddress }) => {
+  const handleLocationSelect = useCallback(async ({ lat: newLat, lng: newLng, googleAddress, inBengaluru }) => {
+    const isInside = inBengaluru !== undefined ? inBengaluru : isInBengaluru(newLat, newLng);
+    if (!isInside) {
+      setMapSyncToast({
+        title: "⛔ Outside Bengaluru Limits",
+        message: `Coordinates (${newLat.toFixed(5)}, ${newLng.toFixed(5)}) lie outside Bengaluru Metropolitan limits (BTP operational boundary). ASTER response plans only cater to BTP jurisdiction.`
+      });
+      setTimeout(() => setMapSyncToast(null), 6000);
+      return;
+    }
+
     if (pinMode === "end") {
       setEndLat(newLat);
       setEndLng(newLng);
@@ -434,6 +444,23 @@ export default function PreEventTab({ config, apiKey }) {
 
   // Run Pre-Event Response Plan & Audit
   const handleSimulate = async () => {
+    if (!isInBengaluru(parseFloat(lat), parseFloat(lng))) {
+      setMapSyncToast({
+        title: "⛔ Origin Location Outside Bengaluru",
+        message: `Origin coordinates (${lat}, ${lng}) lie outside Bengaluru limits (BTP operational boundary). Pre-event mitigation only caters to Bengaluru.`
+      });
+      setTimeout(() => setMapSyncToast(null), 5000);
+      return null;
+    }
+    if (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng))) {
+      setMapSyncToast({
+        title: "⛔ Destination Outside Bengaluru",
+        message: `Route end coordinates (${endLat}, ${endLng}) lie outside Bengaluru limits (BTP operational boundary). Pre-event mitigation only caters to Bengaluru.`
+      });
+      setTimeout(() => setMapSyncToast(null), 5000);
+      return null;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -1281,6 +1308,23 @@ export default function PreEventTab({ config, apiKey }) {
               </div>
             </div>
 
+            {(!isInBengaluru(parseFloat(lat), parseFloat(lng))) && (
+              <div style={{
+                background: "rgba(239, 68, 68, 0.15)",
+                border: "1px solid #EF4444",
+                borderRadius: "8px",
+                padding: "8px 14px",
+                fontSize: "0.82rem",
+                color: "#FCA5A5",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}>
+                <AlertTriangle size={16} color="#EF4444" style={{ flexShrink: 0 }} />
+                <span>⛔ Start location ({lat}, {lng}) is outside Bengaluru city limits (BTP Jurisdiction).</span>
+              </div>
+            )}
+
             {/* Destination / Route End Coordinates */}
             <div style={{
               background: "rgba(15,23,42,0.6)",
@@ -1329,6 +1373,23 @@ export default function PreEventTab({ config, apiKey }) {
                   />
                 </div>
               </div>
+
+              {(endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng))) && (
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid #EF4444",
+                  borderRadius: "8px",
+                  padding: "8px 14px",
+                  fontSize: "0.82rem",
+                  color: "#FCA5A5",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}>
+                  <AlertTriangle size={16} color="#EF4444" style={{ flexShrink: 0 }} />
+                  <span>⛔ Destination location ({endLat}, {endLng}) is outside Bengaluru city limits (BTP Jurisdiction).</span>
+                </div>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "16px" }}>
                 <div className="form-group" style={{ margin: 0 }}>
@@ -1559,6 +1620,25 @@ export default function PreEventTab({ config, apiKey }) {
             </div>
           </div>
 
+          {(!isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))) && (
+            <div style={{
+              width: "100%",
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid #EF4444",
+              borderRadius: "8px",
+              padding: "10px 16px",
+              fontSize: "0.84rem",
+              color: "#FCA5A5",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "10px"
+            }}>
+              <AlertTriangle size={18} color="#EF4444" style={{ flexShrink: 0 }} />
+              <span>⛔ Location Outside Bengaluru Limits: Pre-event response simulation & live publishing are disabled for out-of-bounds locations.</span>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
             <button
               className="btn-secondary"
@@ -1578,18 +1658,31 @@ export default function PreEventTab({ config, apiKey }) {
 
             <button
               className="btn-secondary"
-              style={{ fontSize: "0.85rem", padding: "10px 18px", background: "rgba(16, 185, 129, 0.15)", borderColor: "#10B981", color: "#86EFAC" }}
+              style={{
+                fontSize: "0.85rem",
+                padding: "10px 18px",
+                background: "rgba(16, 185, 129, 0.15)",
+                borderColor: "#10B981",
+                color: "#86EFAC",
+                opacity: (!isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))) ? 0.5 : 1,
+                cursor: (!isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))) ? "not-allowed" : "pointer"
+              }}
               onClick={handleSaveToDatabase}
-              disabled={saveLoading}
+              disabled={saveLoading || !isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))}
             >
               <Save size={16} /> {saveLoading ? "Publishing Live..." : "Publish Live to Dashboard & Database"}
             </button>
 
             <button
               className="btn-primary"
-              style={{ fontSize: "0.95rem", padding: "10px 24px" }}
+              style={{
+                fontSize: "0.95rem",
+                padding: "10px 24px",
+                opacity: (!isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))) ? 0.5 : 1,
+                cursor: (!isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))) ? "not-allowed" : "pointer"
+              }}
               onClick={handleSimulate}
-              disabled={loading}
+              disabled={loading || !isInBengaluru(parseFloat(lat), parseFloat(lng)) || (endLat && endLng && (parseFloat(endLat) !== 0 || parseFloat(endLng) !== 0) && !isInBengaluru(parseFloat(endLat), parseFloat(endLng)))}
             >
               {loading ? (
                 <span>Simulating...</span>

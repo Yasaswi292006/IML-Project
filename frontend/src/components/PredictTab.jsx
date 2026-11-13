@@ -5,7 +5,7 @@ import {
   Sparkles, Layers, ArrowRight, Activity, Zap, Check, Compass, Sliders,
   Minimize2, Maximize2
 } from 'lucide-react';
-import GoogleMapComponent from './GoogleMapComponent';
+import GoogleMapComponent, { isInBengaluru, BENGALURU_BOUNDS } from './GoogleMapComponent';
 
 // ─────────────────────────────────────────────────────────────────
 // Preset Scenario Test Cases for Immediate Testing & Auto-Prediction
@@ -184,6 +184,7 @@ export default function PredictTab({ config, apiKey }) {
   // Operational State
   const [activePresetId, setActivePresetId] = useState("tc_silk_board_crash");
   const [validationErrors, setValidationErrors] = useState([]);
+  const [outOfBoundsError, setOutOfBoundsError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copySuccess, setCopySuccess] = useState(null);
@@ -207,11 +208,19 @@ export default function PredictTab({ config, apiKey }) {
   };
 
   // Map Click Handler - Update Coordinates & Pin & Automatically populate all fields on the left
-  const handleLocationSelect = async ({ lat: newLat, lng: newLng, googleAddress }) => {
+  const handleLocationSelect = async ({ lat: newLat, lng: newLng, googleAddress, inBengaluru }) => {
     setLat(newLat);
     setLng(newLng);
-    setMapSyncLoading(true);
     setActivePresetId(null);
+
+    const isInside = inBengaluru !== undefined ? inBengaluru : isInBengaluru(newLat, newLng);
+    if (!isInside) {
+      setOutOfBoundsError(`⛔ Selected Location Outside Bengaluru Limits: Coordinates (${newLat.toFixed(5)}, ${newLng.toFixed(5)}) are outside the Bengaluru Traffic Police (BTP) jurisdictional perimeter (${BENGALURU_BOUNDS.minLat}°–${BENGALURU_BOUNDS.maxLat}° N, ${BENGALURU_BOUNDS.minLng}°–${BENGALURU_BOUNDS.maxLng}° E). ASTER incident response cannot cater to locations outside Bengaluru.`);
+      setSyncedNotification(null);
+      return;
+    }
+    setOutOfBoundsError(null);
+    setMapSyncLoading(true);
 
     try {
       const resp = await fetch(`http://127.0.0.1:8000/api/lookup-location?lat=${newLat}&lng=${newLng}`);
@@ -269,8 +278,8 @@ export default function PredictTab({ config, apiKey }) {
     if (!junction) errors.push("Junction / Landmark");
     if (!zone) errors.push("Administrative Zone");
     if (!address || !address.trim()) errors.push("Incident Address / Location");
-    if (isNaN(lat) || lat < 12.5 || lat > 13.5) errors.push("Valid Latitude (12.5 - 13.5)");
-    if (isNaN(lng) || lng < 77.3 || lng > 77.9) errors.push("Valid Longitude (77.3 - 77.9)");
+    if (isNaN(lat) || !isInBengaluru(lat, lng)) errors.push(`Bengaluru Latitude (12.7300 - 13.2500 N)`);
+    if (isNaN(lng) || !isInBengaluru(lat, lng)) errors.push(`Bengaluru Longitude (77.3700 - 77.8200 E)`);
     if (!dateStr) errors.push("Start Date");
     if (!description || !description.trim()) errors.push("Incident Description / Notes");
     return errors;
@@ -295,6 +304,10 @@ export default function PredictTab({ config, apiKey }) {
   };
 
   const handlePredict = async () => {
+    if (!isInBengaluru(lat, lng)) {
+      setOutOfBoundsError(`⛔ Out of Bengaluru Limits: Coordinates (${lat}, ${lng}) are outside BTP jurisdiction. ASTER tactical response cannot cater to incidents outside Bengaluru.`);
+      return;
+    }
     const errors = validateForm();
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -624,6 +637,41 @@ export default function PredictTab({ config, apiKey }) {
         )}
       </div>
 
+      {/* Out of Bengaluru Limits Warning Banner */}
+      {outOfBoundsError && (
+        <div style={{
+          background: "rgba(239, 68, 68, 0.16)",
+          border: "1px solid #EF4444",
+          borderRadius: "10px",
+          padding: "14px 18px",
+          marginBottom: "20px",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "12px",
+          animation: "fadeIn 0.3s ease"
+        }}>
+          <AlertTriangle color="#EF4444" size={22} style={{ marginTop: "2px", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: "700", color: "#FCA5A5", fontSize: "0.95rem" }}>
+              ⛔ Jurisdiction Warning — Location Outside Bengaluru City Limits
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#FECACA", marginTop: "4px", lineHeight: "1.5" }}>
+              {outOfBoundsError}
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#F87171", marginTop: "6px" }}>
+              ASTER tactical algorithms & Bengaluru Traffic Police (BTP) response only cater to the designated Bengaluru Metropolitan perimeter.
+            </div>
+          </div>
+          <button
+            onClick={() => setOutOfBoundsError(null)}
+            style={{ background: "transparent", border: "none", color: "#FCA5A5", cursor: "pointer", fontSize: "1.2rem", lineHeight: 1 }}
+            title="Dismiss notice"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Validation Error Banner */}
       {validationErrors.length > 0 && (
         <div style={{
@@ -870,6 +918,25 @@ export default function PredictTab({ config, apiKey }) {
             </div>
           </div>
 
+          {!isInBengaluru(lat, lng) && (
+            <div style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid #EF4444",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              marginTop: "4px",
+              marginBottom: "12px",
+              fontSize: "0.78rem",
+              color: "#FCA5A5",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <AlertTriangle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
+              <span>⛔ Coordinates are outside Bengaluru City limits (BTP Perimeter). Response prediction is disabled.</span>
+            </div>
+          )}
+
           {/* Section 3: Temporal & Environmental Conditions */}
           <div style={{ fontSize: "0.76rem", fontWeight: "700", color: "#60A5FA", textTransform: "uppercase", letterSpacing: "0.05em", marginTop: "16px", marginBottom: "10px" }}>
             3. Temporal & Environmental Conditions
@@ -963,11 +1030,18 @@ export default function PredictTab({ config, apiKey }) {
 
           <button
             className="btn-primary"
-            style={{ width: "100%", marginTop: "14px", padding: "12px", fontSize: "0.95rem" }}
+            style={{
+              width: "100%",
+              marginTop: "14px",
+              padding: "12px",
+              fontSize: "0.95rem",
+              opacity: !isInBengaluru(lat, lng) ? 0.55 : 1,
+              cursor: !isInBengaluru(lat, lng) ? "not-allowed" : "pointer"
+            }}
             onClick={handlePredict}
-            disabled={loading}
+            disabled={loading || !isInBengaluru(lat, lng)}
           >
-            {loading ? "Computing ASTER AI Pipeline..." : "⚡ Run ASTER AI Pipeline"}
+            {!isInBengaluru(lat, lng) ? "⛔ Disabled — Out of Bengaluru Limits" : loading ? "Computing ASTER AI Pipeline..." : "⚡ Run ASTER AI Pipeline"}
           </button>
         </div>
 

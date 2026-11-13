@@ -19,6 +19,44 @@ const DARK_TACTICAL_STYLE = [
 const DEFAULT_CENTER = { lat: 12.9716, lng: 77.5946 };
 const EMPTY_ARRAY = [];
 
+// ─────────────────────────────────────────────────────────────
+// Bengaluru Metropolitan Area & BTP Jurisdiction Limits
+// ─────────────────────────────────────────────────────────────
+export const BENGALURU_BOUNDS = {
+  minLat: 12.7300,
+  maxLat: 13.2500,
+  minLng: 77.3700,
+  maxLng: 77.8200
+};
+
+export const isInBengaluru = (lat, lng) => {
+  if (lat == null || lng == null) return false;
+  const numLat = parseFloat(lat);
+  const numLng = parseFloat(lng);
+  if (isNaN(numLat) || isNaN(numLng)) return false;
+  return numLat >= BENGALURU_BOUNDS.minLat &&
+         numLat <= BENGALURU_BOUNDS.maxLat &&
+         numLng >= BENGALURU_BOUNDS.minLng &&
+         numLng <= BENGALURU_BOUNDS.maxLng;
+};
+
+export const BENGALURU_PERIMETER_COORDS = [
+  { lat: 13.2450, lng: 77.7120 }, // KIA / Devanahalli North-East
+  { lat: 13.2380, lng: 77.6050 }, // Yelahanka North
+  { lat: 13.1650, lng: 77.4650 }, // Hesaraghatta North
+  { lat: 13.0600, lng: 77.3800 }, // Nelamangala West
+  { lat: 12.9650, lng: 77.3950 }, // Magadi Road West
+  { lat: 12.8750, lng: 77.4450 }, // Kengeri / Bidadi South-West
+  { lat: 12.7850, lng: 77.5100 }, // Kanakapura Road South
+  { lat: 12.7400, lng: 77.5850 }, // Jigani / Bannerghatta South
+  { lat: 12.7550, lng: 77.6950 }, // Attibele South-East
+  { lat: 12.8350, lng: 77.7750 }, // Sarjapur East
+  { lat: 12.9550, lng: 77.8100 }, // Whitefield East
+  { lat: 13.0750, lng: 77.7950 }, // Hoskote East
+  { lat: 13.1850, lng: 77.7650 }, // Budigere North-East
+  { lat: 13.2450, lng: 77.7120 }
+];
+
 export default function GoogleMapComponent({
   apiKey,
   center = DEFAULT_CENTER,
@@ -42,6 +80,7 @@ export default function GoogleMapComponent({
   const [showHotspots, setShowHotspots] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authError, setAuthError] = useState(false);
+  const [outOfBoundsToast, setOutOfBoundsToast] = useState(null);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,9 +154,7 @@ export default function GoogleMapComponent({
     if (window.google && mapInstance) {
       try {
         const geocoder = new window.google.maps.Geocoder();
-        const fullQuery = locationQuery.toLowerCase().includes("bengaluru") || locationQuery.toLowerCase().includes("bangalore")
-          ? locationQuery
-          : `${locationQuery}, Bengaluru, Karnataka`;
+        const fullQuery = locationQuery;
 
         geocoder.geocode(
           {
@@ -132,6 +169,25 @@ export default function GoogleMapComponent({
               const targetLng = parseFloat(loc.lng().toFixed(6));
               const formattedAddr = results[0].formatted_address;
 
+              // Check if geocoded result is outside Bengaluru
+              if (!isInBengaluru(targetLat, targetLng)) {
+                setOutOfBoundsToast({
+                  title: "⛔ Location Outside Bengaluru",
+                  message: `"${locationQuery}" (${targetLat}, ${targetLng}) is outside Bengaluru city limits. ASTER operations and BTP dispatch only cater to the Bengaluru Metropolitan Area.`
+                });
+                setTimeout(() => setOutOfBoundsToast(null), 6500);
+
+                if (onLocationSelect) {
+                  onLocationSelect({
+                    lat: targetLat,
+                    lng: targetLng,
+                    inBengaluru: false,
+                    error: `"${locationQuery}" is outside Bengaluru city limits. ASTER only caters to the Bengaluru Metropolitan Area.`
+                  });
+                }
+                return;
+              }
+
               mapInstance.panTo({ lat: targetLat, lng: targetLng });
               mapInstance.setZoom(14);
               setSearchQuery(locationQuery);
@@ -140,7 +196,8 @@ export default function GoogleMapComponent({
                 onLocationSelect({
                   lat: targetLat,
                   lng: targetLng,
-                  googleAddress: formattedAddr
+                  googleAddress: formattedAddr,
+                  inBengaluru: true
                 });
               }
             }
@@ -298,6 +355,26 @@ export default function GoogleMapComponent({
       trafficLayer.setMap(showTraffic ? mapInstance : null);
     }
   }, [showTraffic, trafficLayer, mapInstance]);
+
+  // 3b. Render BTP Operational Limits Boundary Polygon on Map
+  useEffect(() => {
+    if (!mapInstance || !window.google) return;
+
+    const boundaryPolygon = new window.google.maps.Polygon({
+      paths: BENGALURU_PERIMETER_COORDS,
+      strokeColor: "#3B82F6",
+      strokeOpacity: 0.85,
+      strokeWeight: 2,
+      fillColor: "#3B82F6",
+      fillOpacity: 0.035,
+      clickable: false,
+      map: mapInstance
+    });
+
+    return () => {
+      boundaryPolygon.setMap(null);
+    };
+  }, [mapInstance]);
 
   // 4. Render Density Mode Overlays
   useEffect(() => {
@@ -467,7 +544,7 @@ export default function GoogleMapComponent({
     densityObjectsRef.current = newObjects;
   }, [mapInstance, mode, events, showHotspots]);
 
-  // 4b. Location Click Listener with Geocoding
+  // 4b. Location Click Listener with Geocoding & Bengaluru Limits Validation
   useEffect(() => {
     if (!mapInstance || !window.google) return;
 
@@ -476,7 +553,43 @@ export default function GoogleMapComponent({
       const clickedLat = parseFloat(e.latLng.lat().toFixed(6));
       const clickedLng = parseFloat(e.latLng.lng().toFixed(6));
 
-      // Attempt reverse geocoding via Google Maps Geocoder
+      // 1. Bengaluru City Limits Validation Check
+      if (!isInBengaluru(clickedLat, clickedLng)) {
+        const outOfBoundsWin = new window.google.maps.InfoWindow({
+          position: { lat: clickedLat, lng: clickedLng },
+          content: `
+            <div style="font-family:'Segoe UI',sans-serif;color:#FEE2E2;background:#0F172A;padding:12px 14px;border-radius:8px;border:1px solid #EF4444;max-width:270px;box-shadow:0 10px 25px rgba(0,0,0,0.7);">
+              <div style="display:flex;align-items:center;gap:6px;font-weight:800;color:#F87171;font-size:0.86rem;margin-bottom:6px;">
+                <span>⛔</span> OUT OF BENGALURU LIMITS
+              </div>
+              <div style="font-size:0.78rem;line-height:1.4;color:#E2E8F0;">
+                The selected location (<b>${clickedLat}, ${clickedLng}</b>) is outside Bengaluru city limits. ASTER operations and BTP tactical response only cater to the Bengaluru Metropolitan Area.
+              </div>
+              <div style="font-size:0.72rem;color:#93C5FD;margin-top:6px;font-weight:600;">
+                Please select a point within the BTP jurisdiction perimeter.
+              </div>
+            </div>
+          `
+        });
+        outOfBoundsWin.open(mapInstance);
+        setTimeout(() => outOfBoundsWin.close(), 6500);
+
+        setOutOfBoundsToast({
+          title: "⛔ Location Outside Bengaluru Limits",
+          message: `Coordinates (${clickedLat}, ${clickedLng}) are outside Bengaluru city limits. ASTER operations cannot cater to incidents outside BTP jurisdiction.`
+        });
+        setTimeout(() => setOutOfBoundsToast(null), 6000);
+
+        onLocationSelectRef.current({
+          lat: clickedLat,
+          lng: clickedLng,
+          inBengaluru: false,
+          error: `Selected location (${clickedLat}, ${clickedLng}) is outside Bengaluru city limits. ASTER only caters to the Bengaluru Metropolitan Area.`
+        });
+        return;
+      }
+
+      // 2. Inside Bengaluru: Attempt reverse geocoding via Google Maps Geocoder
       try {
         if (window.google.maps.Geocoder) {
           const geocoder = new window.google.maps.Geocoder();
@@ -489,7 +602,8 @@ export default function GoogleMapComponent({
               onLocationSelectRef.current({
                 lat: clickedLat,
                 lng: clickedLng,
-                googleAddress
+                googleAddress,
+                inBengaluru: true
               });
             }
           });
@@ -502,7 +616,8 @@ export default function GoogleMapComponent({
       if (onLocationSelectRef.current) {
         onLocationSelectRef.current({
           lat: clickedLat,
-          lng: clickedLng
+          lng: clickedLng,
+          inBengaluru: true
         });
       }
     });
@@ -751,6 +866,23 @@ export default function GoogleMapComponent({
                   key={p.place_id}
                   onClick={() => {
                     if (p.lat && p.lng) {
+                      if (!isInBengaluru(p.lat, p.lng)) {
+                        setOutOfBoundsToast({
+                          title: "⛔ Location Outside Bengaluru",
+                          message: `"${p.main_text || p.description}" is outside Bengaluru city limits. ASTER operations cannot cater to areas outside BTP jurisdiction.`
+                        });
+                        setTimeout(() => setOutOfBoundsToast(null), 6500);
+                        if (onLocationSelect) {
+                          onLocationSelect({
+                            lat: p.lat,
+                            lng: p.lng,
+                            inBengaluru: false,
+                            error: `"${p.main_text || p.description}" is outside Bengaluru city limits.`
+                          });
+                        }
+                        return;
+                      }
+
                       if (mapInstance) {
                         mapInstance.panTo({ lat: p.lat, lng: p.lng });
                         mapInstance.setZoom(14);
@@ -761,7 +893,8 @@ export default function GoogleMapComponent({
                         onLocationSelect({
                           lat: p.lat,
                           lng: p.lng,
-                          googleAddress: p.description
+                          googleAddress: p.description,
+                          inBengaluru: true
                         });
                       }
                     } else {
@@ -877,7 +1010,66 @@ export default function GoogleMapComponent({
             </div>
           </>
         )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", borderLeft: "1px solid rgba(255,255,255,0.12)", paddingLeft: "10px" }}>
+          <span style={{
+            background: "rgba(59, 130, 246, 0.2)",
+            color: "#93C5FD",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontSize: "0.7rem",
+            fontWeight: "700",
+            border: "1px solid rgba(59, 130, 246, 0.4)"
+          }}>BTP BOUNDS</span>
+          <span style={{ fontSize: "0.72rem", color: "#CBD5E1" }}>Bengaluru Limits Active</span>
+        </div>
       </div>
+
+      {/* Out of Bounds Warning Notification Banner */}
+      {outOfBoundsToast && (
+        <div style={{
+          position: "absolute",
+          top: "65px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "linear-gradient(135deg, rgba(153, 27, 27, 0.95), rgba(30, 41, 59, 0.95))",
+          border: "2px solid #EF4444",
+          boxShadow: "0 12px 36px rgba(0,0,0,0.7)",
+          color: "#FEE2E2",
+          padding: "12px 20px",
+          borderRadius: "10px",
+          fontSize: "0.84rem",
+          fontWeight: "600",
+          zIndex: 50,
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          maxWidth: "520px",
+          textAlign: "left"
+        }}>
+          <span style={{ fontSize: "1.4rem" }}>⛔</span>
+          <div>
+            <div style={{ fontWeight: "800", color: "#FCA5A5", fontSize: "0.9rem" }}>{outOfBoundsToast.title}</div>
+            <div style={{ fontSize: "0.78rem", color: "#FECACA", marginTop: "2px", lineHeight: "1.35" }}>
+              {outOfBoundsToast.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setOutOfBoundsToast(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#FCA5A5",
+              cursor: "pointer",
+              padding: "4px",
+              marginLeft: "auto",
+              fontSize: "1rem"
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {authError && (
         <div style={{
