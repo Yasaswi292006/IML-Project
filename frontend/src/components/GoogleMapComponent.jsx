@@ -316,9 +316,9 @@ export default function GoogleMapComponent({
 
     // 1. Coordinate-Based Deduplication & Priority Resolution
     // If the same coordinate has:
-    // - Red & Yellow -> Red persists (higher impact)
-    // - Red & Green -> Red persists (higher impact)
-    // - Green & Yellow -> Green persists (preserves Low-tier event visibility)
+    // - Red & Yellow -> Red persists (High impact)
+    // - Red & Green  -> Red persists (High impact)
+    // - Yellow & Green -> Yellow persists (Medium impact > Low impact)
     const coordinateGroups = new Map();
     events.forEach(ev => {
       const coordKey = `${parseFloat(ev.lat).toFixed(4)}_${parseFloat(ev.lng).toFixed(4)}`;
@@ -337,21 +337,16 @@ export default function GoogleMapComponent({
 
       const hasRed = groupEvents.some(e => e.tier === "High");
       const hasYellow = groupEvents.some(e => e.tier === "Medium");
-      const hasGreen = groupEvents.some(e => e.tier === "Low" || (!e.tier || (e.tier !== "High" && e.tier !== "Medium")));
 
-      // Red persists over Yellow and Green
+      // 1. Red (High impact) persists over Yellow and Green
       if (hasRed) {
         winningEvents.push(groupEvents.find(e => e.tier === "High"));
       }
-      // Green persists over Yellow when both are present at the same point
-      else if (hasGreen && hasYellow) {
-        winningEvents.push(groupEvents.find(e => e.tier === "Low" || (!e.tier || (e.tier !== "High" && e.tier !== "Medium"))));
-      }
-      // Yellow persists if only Yellow
+      // 2. Yellow (Medium impact) persists over Green (Low impact)
       else if (hasYellow) {
         winningEvents.push(groupEvents.find(e => e.tier === "Medium"));
       }
-      // Otherwise default to first event
+      // 3. Otherwise Green (Low impact)
       else {
         winningEvents.push(groupEvents[0]);
       }
