@@ -314,9 +314,59 @@ export default function GoogleMapComponent({
     const newObjects = [];
     const infoWindow = new window.google.maps.InfoWindow();
 
-    // Render density circles AND center pinpoints for every single event
-    // Ensures 100% of disruption areas have an exact pinpoint location in their center
+    // 1. Coordinate-Based Deduplication & Priority Resolution
+    // If the same coordinate has:
+    // - Red & Yellow -> Red persists (higher impact)
+    // - Red & Green -> Red persists (higher impact)
+    // - Green & Yellow -> Green persists (preserves Low-tier event visibility)
+    const coordinateGroups = new Map();
     events.forEach(ev => {
+      const coordKey = `${parseFloat(ev.lat).toFixed(4)}_${parseFloat(ev.lng).toFixed(4)}`;
+      if (!coordinateGroups.has(coordKey)) {
+        coordinateGroups.set(coordKey, []);
+      }
+      coordinateGroups.get(coordKey).push(ev);
+    });
+
+    const winningEvents = [];
+    coordinateGroups.forEach((groupEvents) => {
+      if (groupEvents.length === 1) {
+        winningEvents.push(groupEvents[0]);
+        return;
+      }
+
+      const hasRed = groupEvents.some(e => e.tier === "High");
+      const hasYellow = groupEvents.some(e => e.tier === "Medium");
+      const hasGreen = groupEvents.some(e => e.tier === "Low" || (!e.tier || (e.tier !== "High" && e.tier !== "Medium")));
+
+      // Red persists over Yellow and Green
+      if (hasRed) {
+        winningEvents.push(groupEvents.find(e => e.tier === "High"));
+      }
+      // Green persists over Yellow when both are present at the same point
+      else if (hasGreen && hasYellow) {
+        winningEvents.push(groupEvents.find(e => e.tier === "Low" || (!e.tier || (e.tier !== "High" && e.tier !== "Medium"))));
+      }
+      // Yellow persists if only Yellow
+      else if (hasYellow) {
+        winningEvents.push(groupEvents.find(e => e.tier === "Medium"));
+      }
+      // Otherwise default to first event
+      else {
+        winningEvents.push(groupEvents[0]);
+      }
+    });
+
+    // 2. Strict Drawing Order: Green first (bottom), Yellow second (middle), Red third (top)
+    // Ensures whatever is on top is visible without occlusion
+    const sortedWinningEvents = winningEvents.sort((a, b) => {
+      const orderA = a.tier === "High" ? 3 : a.tier === "Medium" ? 2 : 1;
+      const orderB = b.tier === "High" ? 3 : b.tier === "Medium" ? 2 : 1;
+      return orderA - orderB; // 1 (Green) -> 2 (Yellow) -> 3 (Red)
+    });
+
+    // 3. Render Density Circles and Center Pinpoint Markers in Green -> Yellow -> Red sequence
+    sortedWinningEvents.forEach(ev => {
       const isHigh = ev.tier === "High";
       const isMed = ev.tier === "Medium";
       const isLow = ev.tier === "Low" || (!isHigh && !isMed);
@@ -326,6 +376,7 @@ export default function GoogleMapComponent({
       const strokeColor = isHigh ? "#DC2626" : isMed ? "#EAB308" : "#22C55E";
       const pinBorder = isHigh ? "#FECACA" : isMed ? "#FEF08A" : "#BBF7D0";
       const badgeBg = isHigh ? "#7F1D1D" : isMed ? "#78350F" : "#14532D";
+      const zIndexVal = isHigh ? 30 : isMed ? 20 : 10;
       const radius = isHigh ? 440 : isMed ? 340 : 280;
       const opacity = isHigh ? 0.60 : isMed ? 0.54 : 0.50;
 
@@ -338,6 +389,7 @@ export default function GoogleMapComponent({
         strokeColor: strokeColor,
         strokeOpacity: 0.95,
         strokeWeight: isLow ? 2.2 : 1.8,
+        zIndex: zIndexVal,
         map: mapInstance
       });
       newObjects.push(circle);
@@ -346,6 +398,7 @@ export default function GoogleMapComponent({
       const marker = new window.google.maps.Marker({
         position: { lat: ev.lat, lng: ev.lng },
         map: mapInstance,
+        zIndex: zIndexVal,
         title: `[${ev.tier}] ${ev.cause} (${ev.corridor})`,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
