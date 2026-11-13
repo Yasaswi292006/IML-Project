@@ -314,7 +314,8 @@ export default function GoogleMapComponent({
     const newObjects = [];
     const infoWindow = new window.google.maps.InfoWindow();
 
-    // Render density circles with distinct Dark Red, Dark Yellow, Dark Green styling
+    // Render density circles AND center pinpoints for every single event
+    // Ensures 100% of disruption areas have an exact pinpoint location in their center
     events.forEach(ev => {
       const isHigh = ev.tier === "High";
       const isMed = ev.tier === "Medium";
@@ -323,9 +324,12 @@ export default function GoogleMapComponent({
       // Dark Red (#B91C1C), Dark Yellow (#D97706), Dark Green (#15803D)
       const color = isHigh ? "#B91C1C" : isMed ? "#D97706" : "#15803D";
       const strokeColor = isHigh ? "#DC2626" : isMed ? "#EAB308" : "#22C55E";
-      const radius = isHigh ? 440 : isMed ? 340 : 280; // Expanded Low tier radius from 150m to 280m
-      const opacity = isHigh ? 0.60 : isMed ? 0.54 : 0.50; // Increased Low tier opacity from 0.20 to 0.50
+      const pinBorder = isHigh ? "#FECACA" : isMed ? "#FEF08A" : "#BBF7D0";
+      const badgeBg = isHigh ? "#7F1D1D" : isMed ? "#78350F" : "#14532D";
+      const radius = isHigh ? 440 : isMed ? 340 : 280;
+      const opacity = isHigh ? 0.60 : isMed ? 0.54 : 0.50;
 
+      // 1. Disruption Impact Area Cordon
       const circle = new window.google.maps.Circle({
         center: { lat: ev.lat, lng: ev.lng },
         radius: radius,
@@ -337,28 +341,16 @@ export default function GoogleMapComponent({
         map: mapInstance
       });
       newObjects.push(circle);
-    });
 
-    // Render clickable marker pins across all tiers (High: Dark Red, Med: Dark Yellow, Low: Dark Green)
-    // Ensures Low tier events are clearly marked with their own dark green pins
-    const displayEvents = events.slice(0, 100);
-    displayEvents.forEach(ev => {
-      const isHigh = ev.tier === "High";
-      const isMed = ev.tier === "Medium";
-      const isLow = ev.tier === "Low" || (!isHigh && !isMed);
-
-      const pinColor = isHigh ? "#B91C1C" : isMed ? "#D97706" : "#15803D";
-      const pinBorder = isHigh ? "#FECACA" : isMed ? "#FEF08A" : "#BBF7D0";
-      const badgeBg = isHigh ? "#7F1D1D" : isMed ? "#78350F" : "#14532D";
-
+      // 2. Center Pinpoint Location Marker (every circle gets its exact pinpoint)
       const marker = new window.google.maps.Marker({
         position: { lat: ev.lat, lng: ev.lng },
         map: mapInstance,
         title: `[${ev.tier}] ${ev.cause} (${ev.corridor})`,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: isHigh ? 6.5 : isMed ? 5.5 : 5,
-          fillColor: pinColor,
+          scale: isHigh ? 6 : isMed ? 5.2 : 4.8,
+          fillColor: color,
           fillOpacity: 1.0,
           strokeColor: pinBorder,
           strokeWeight: 1.8
@@ -367,7 +359,7 @@ export default function GoogleMapComponent({
 
       marker.addListener("click", () => {
         infoWindow.setContent(`
-          <div style="font-family:'Segoe UI',sans-serif;color:#E2E8F0;background:#0F1729;padding:10px 14px;border-radius:8px;border:1px solid ${pinColor};min-width:190px;">
+          <div style="font-family:'Segoe UI',sans-serif;color:#E2E8F0;background:#0F1729;padding:10px 14px;border-radius:8px;border:1px solid ${color};min-width:190px;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
               <span style="background:${badgeBg};color:#FFFFFF;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:700;text-transform:uppercase;">
                 ${ev.tier} Impact
