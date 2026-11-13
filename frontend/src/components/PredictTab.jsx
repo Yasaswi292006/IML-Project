@@ -190,7 +190,6 @@ export default function PredictTab({ config, apiKey }) {
   const [copySuccess, setCopySuccess] = useState(null);
   const [mapSyncLoading, setMapSyncLoading] = useState(false);
   const [syncedNotification, setSyncedNotification] = useState(null);
-  const [showSchemaBreakdown, setShowSchemaBreakdown] = useState(false);
   const [mapCollapsed, setMapCollapsed] = useState(false);
 
   // When corridor changes, populate smart defaults from dataset metadata
@@ -450,191 +449,57 @@ export default function PredictTab({ config, apiKey }) {
     <div style={{ maxWidth: "1550px", margin: "0 auto", paddingBottom: "60px" }}>
 
       {/* ─────────────────────────────────────────────────────────────
-          1. PRESET SCENARIO TEST CASES (Matches Pre-Event Planner Pattern)
+          1. PRESET SCENARIO SELECTOR (Dropdown Underneath Heading)
          ───────────────────────────────────────────────────────────── */}
       <div style={{
         background: "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.95))",
         border: "1px solid rgba(59, 130, 246, 0.35)",
         borderRadius: "14px",
-        padding: "18px 24px",
+        padding: "16px 22px",
         marginBottom: "24px",
         boxShadow: "0 10px 25px rgba(0,0,0,0.4)"
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "14px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "1.4rem" }}>⚡</span>
-            <div>
-              <h2 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                Tactical Scenario Test Cases & Model Validation
-                <span style={{ fontSize: "0.72rem", background: "rgba(59,130,246,0.2)", color: "#93C5FD", padding: "2px 8px", borderRadius: "4px", fontWeight: "600" }}>
-                  Instant Auto-Predict
-                </span>
-              </h2>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                Select any incident scenario below to immediately populate all 12 input features, pin the map coordinates, and trigger multi-model AI inference.
-              </div>
-            </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div>
+            <h2 style={{ fontSize: "1.15rem", fontWeight: "800", color: "#F8FAFC", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>⚡</span> Tactical Scenario Test Cases & Model Validation
+            </h2>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button
-              onClick={() => setShowSchemaBreakdown(!showSchemaBreakdown)}
-              style={{
-                background: showSchemaBreakdown ? "rgba(59, 130, 246, 0.25)" : "rgba(30, 41, 59, 0.7)",
-                border: "1px solid rgba(59, 130, 246, 0.4)",
-                color: "#93C5FD",
-                borderRadius: "8px",
-                padding: "6px 14px",
-                fontSize: "0.78rem",
-                fontWeight: "600",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer"
-              }}
-            >
-              <Layers size={14} />
-              {showSchemaBreakdown ? "Hide 46-Column Schema Breakdown" : "View 46-Column Schema Breakdown"}
-            </button>
-            <div style={{
-              background: "rgba(16, 185, 129, 0.12)",
-              border: "1px solid rgba(16, 185, 129, 0.35)",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              color: "#86EFAC",
-              fontSize: "0.78rem",
-              fontWeight: "700"
-            }}>
-              <CheckCircle2 size={14} /> 4 ML MODELS ACTIVE
-            </div>
-          </div>
-        </div>
-
-        {/* Clickable Test Case Cards Grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-          gap: "12px"
-        }}>
-          {PRESET_TEST_CASES.map((tc) => {
-            const isSelected = activePresetId === tc.id;
-            return (
-              <div
-                key={tc.id}
-                onClick={() => applyPresetTestCase(tc)}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+            <label style={{ fontSize: "0.84rem", fontWeight: "600", color: "#93C5FD", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>Select Pre-Designed Scenario:</span>
+            </label>
+            <div style={{ position: "relative", minWidth: "320px", maxWidth: "560px", flex: "1 1 340px" }}>
+              <select
+                className="form-select"
+                value={activePresetId || ""}
+                onChange={(e) => {
+                  const tc = PRESET_TEST_CASES.find(t => t.id === e.target.value);
+                  if (tc) applyPresetTestCase(tc);
+                }}
                 style={{
-                  background: isSelected ? "rgba(59, 130, 246, 0.15)" : "rgba(15, 23, 42, 0.6)",
-                  border: isSelected ? "2px solid #3B82F6" : "1px solid rgba(255, 255, 255, 0.08)",
-                  borderRadius: "10px",
-                  padding: "12px 14px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "8px"
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.borderColor = "rgba(59, 130, 246, 0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
+                  width: "100%",
+                  padding: "9px 14px",
+                  fontSize: "0.88rem",
+                  fontWeight: "600",
+                  borderRadius: "8px",
+                  background: "rgba(15, 23, 42, 0.95)",
+                  border: "1px solid rgba(59, 130, 246, 0.5)",
+                  color: "#F8FAFC",
+                  cursor: "pointer"
                 }}
               >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{
-                      fontSize: "0.68rem",
-                      fontWeight: "700",
-                      background: `${tc.badgeColor}22`,
-                      color: tc.badgeColor,
-                      border: `1px solid ${tc.badgeColor}55`,
-                      padding: "2px 6px",
-                      borderRadius: "4px"
-                    }}>
-                      {tc.badge}
-                    </span>
-                    {isSelected && (
-                      <span style={{ fontSize: "0.7rem", color: "#60A5FA", fontWeight: "700", display: "flex", alignItems: "center", gap: "2px" }}>
-                        <Check size={12} /> ACTIVE
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "#F8FAFC", lineHeight: "1.3" }}>
-                    {tc.name}
-                  </div>
-                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                    📍 {tc.corridor} • {tc.junction}
-                  </div>
-                </div>
-
-                <div style={{
-                  fontSize: "0.72rem",
-                  color: isSelected ? "#93C5FD" : "#94A3B8",
-                  borderTop: "1px solid rgba(255,255,255,0.06)",
-                  paddingTop: "6px",
-                  lineHeight: "1.3"
-                }}>
-                  {tc.expectedSummary}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 46-COLUMN DATASET SCHEMA BREAKDOWN (Expandable Info Card) */}
-        {showSchemaBreakdown && (
-          <div style={{
-            marginTop: "16px",
-            background: "rgba(15, 23, 42, 0.9)",
-            border: "1px solid rgba(59, 130, 246, 0.3)",
-            borderRadius: "10px",
-            padding: "16px 20px",
-            animation: "fadeIn 0.25s ease"
-          }}>
-            <h4 style={{ fontSize: "0.95rem", fontWeight: "700", color: "#F8FAFC", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Layers size={16} color="#60A5FA" />
-              The 46 ASTRAM Dataset Columns — Required Inputs vs Predictable AI Targets
-            </h4>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", fontSize: "0.8rem" }}>
-              <div style={{ background: "rgba(59, 130, 246, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
-                <div style={{ fontWeight: "700", color: "#93C5FD", marginBottom: "6px" }}>
-                  1. Required Input Features (12 Columns)
-                </div>
-                <div style={{ color: "#E2E8F0", lineHeight: "1.5", fontSize: "0.75rem" }}>
-                  <code>corridor</code>, <code>event_cause</code>, <code>event_type</code>, <code>veh_type</code>, <code>address</code>, <code>latitude</code>, <code>longitude</code>, <code>police_station</code>, <code>junction</code>, <code>zone</code>, <code>start_datetime</code>, <code>priority</code>.
-                  <div style={{ marginTop: "6px", color: "var(--text-muted)" }}>
-                    Entered by operator or auto-filled via map pin click.
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ background: "rgba(16, 185, 129, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                <div style={{ fontWeight: "700", color: "#86EFAC", marginBottom: "6px" }}>
-                  2. Predictable Targets (10 Columns)
-                </div>
-                <div style={{ color: "#E2E8F0", lineHeight: "1.5", fontSize: "0.75rem" }}>
-                  <code>impact_tier</code> (GB Model), <code>duration_minutes</code> (LGBM Regressor), <code>end_datetime</code> (Clearance Calc), <code>requires_road_closure</code> (LGBM Closure), <code>event_impact_score</code> (LGBM EIS), <code>priority</code> (LGBM Priority), <code>officers_deployed</code> (Google OR-Tools MILP), <code>deployment_time</code> (BTP SOP SLA), <code>barricades_count</code> (NetworkX), <code>diversion_required</code> (Router).
-                </div>
-              </div>
-
-              <div style={{ background: "rgba(148, 163, 184, 0.08)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(148, 163, 184, 0.2)" }}>
-                <div style={{ fontWeight: "700", color: "#CBD5E1", marginBottom: "6px" }}>
-                  3. System Metadata & Audit (24 Columns)
-                </div>
-                <div style={{ color: "#94A3B8", lineHeight: "1.5", fontSize: "0.75rem" }}>
-                  <code>id</code>, <code>client_id</code>, <code>created_by_id</code>, <code>assigned_to_police_id</code>, <code>kgid</code>, <code>map_file</code>, <code>route_path</code>, <code>created_date</code>, <code>modified_datetime</code>, <code>resolved_datetime</code>, <code>closed_datetime</code>, <code>resolved_at_address</code>, <code>status</code>, etc.
-                  <div style={{ marginTop: "6px", color: "var(--text-muted)" }}>
-                    Backend tracking IDs and post-event records.
-                  </div>
-                </div>
-              </div>
+                <option value="" disabled>-- Select a Pre-Designed Scenario --</option>
+                {PRESET_TEST_CASES.map((tc) => (
+                  <option key={tc.id} value={tc.id} style={{ background: "#0F172A", color: "#F8FAFC" }}>
+                    {tc.name} ({tc.corridor})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Out of Bengaluru Limits Warning Banner */}
