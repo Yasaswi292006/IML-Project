@@ -433,9 +433,9 @@ def get_overview():
             "date_range": "Nov 2025 – Apr 2026"
         },
         "impact_distribution": [
-            {"tier": "High", "count": high_impact, "pct": round(high_impact / total_events * 100, 1), "color": "#EF4444"},
-            {"tier": "Medium", "count": int(total_events * 0.44), "pct": 44.0, "color": "#F59E0B"},
-            {"tier": "Low", "count": int(total_events * 0.267), "pct": 26.7, "color": "#10B981"}
+            {"tier": "High", "count": high_impact, "pct": round(high_impact / total_events * 100, 1), "color": "#B91C1C"},
+            {"tier": "Medium", "count": int(total_events * 0.44), "pct": 44.0, "color": "#D97706"},
+            {"tier": "Low", "count": int(total_events * 0.267), "pct": 26.7, "color": "#15803D"}
         ]
     }
 

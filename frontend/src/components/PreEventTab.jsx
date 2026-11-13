@@ -1364,10 +1364,13 @@ export default function PreEventTab({ config, apiKey }) {
                 <div className="metric-sub">Exclusion & diversion cordon</div>
               </div>
 
-              <div className="metric-card" style={{ borderLeft: "4px solid #10B981", padding: "20px" }}>
+              <div className="metric-card" style={{
+                borderLeft: `4px solid ${simulationResult.effective_tier === "High" ? "#B91C1C" : simulationResult.effective_tier === "Medium" ? "#D97706" : "#15803D"}`,
+                padding: "20px"
+              }}>
                 <div className="metric-title">Forecast Disruption Tier</div>
                 <div className="metric-value" style={{
-                  color: simulationResult.effective_tier === "High" ? "#EF4444" : simulationResult.effective_tier === "Medium" ? "#F59E0B" : "#10B981"
+                  color: simulationResult.effective_tier === "High" ? "#B91C1C" : simulationResult.effective_tier === "Medium" ? "#D97706" : "#15803D"
                 }}>
                   {simulationResult.effective_tier} Tier
                 </div>

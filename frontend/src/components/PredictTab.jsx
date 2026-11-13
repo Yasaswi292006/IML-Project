@@ -1072,7 +1072,7 @@ export default function PredictTab({ config, apiKey }) {
                               fontWeight: "800",
                               fontSize: "0.92rem",
                               color: p.id === "impact_tier"
-                                ? (result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981")
+                                ? (result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D")
                                 : p.id === "duration_minutes" ? "#60A5FA"
                                 : p.id === "manpower_count" ? "#34D399"
                                 : "#F8FAFC"
@@ -1105,13 +1105,13 @@ export default function PredictTab({ config, apiKey }) {
               {/* Triage Overview Metrics */}
               <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr 1fr", gap: "14px" }}>
                 <div className="metric-card" style={{
-                  borderLeft: `4px solid ${result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981"}`
+                  borderLeft: `4px solid ${result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D"}`
                 }}>
                   <div className="metric-title">Forecasted Impact Triage</div>
                   <div style={{
                     fontSize: "1.5rem",
                     fontWeight: "800",
-                    color: result.predicted_tier === "High" ? "#EF4444" : result.predicted_tier === "Medium" ? "#F59E0B" : "#10B981",
+                    color: result.predicted_tier === "High" ? "#B91C1C" : result.predicted_tier === "Medium" ? "#D97706" : "#15803D",
                     marginTop: "4px"
                   }}>
                     {result.predicted_tier === "High" ? "🔴" : result.predicted_tier === "Medium" ? "🟡" : "🟢"} {result.predicted_tier.toUpperCase()} IMPACT

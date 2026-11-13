@@ -314,52 +314,72 @@ export default function GoogleMapComponent({
     const newObjects = [];
     const infoWindow = new window.google.maps.InfoWindow();
 
-    // Render density circles
+    // Render density circles with distinct Dark Red, Dark Yellow, Dark Green styling
     events.forEach(ev => {
       const isHigh = ev.tier === "High";
       const isMed = ev.tier === "Medium";
-      const color = isHigh ? "#EF4444" : isMed ? "#F59E0B" : "#10B981";
-      const radius = isHigh ? 360 : isMed ? 240 : 150;
-      const opacity = isHigh ? 0.38 : isMed ? 0.28 : 0.20;
+      const isLow = ev.tier === "Low" || (!isHigh && !isMed);
+
+      // Dark Red (#B91C1C), Dark Yellow (#D97706), Dark Green (#15803D)
+      const color = isHigh ? "#B91C1C" : isMed ? "#D97706" : "#15803D";
+      const strokeColor = isHigh ? "#DC2626" : isMed ? "#EAB308" : "#22C55E";
+      const radius = isHigh ? 440 : isMed ? 340 : 280; // Expanded Low tier radius from 150m to 280m
+      const opacity = isHigh ? 0.60 : isMed ? 0.54 : 0.50; // Increased Low tier opacity from 0.20 to 0.50
 
       const circle = new window.google.maps.Circle({
         center: { lat: ev.lat, lng: ev.lng },
         radius: radius,
         fillColor: color,
         fillOpacity: opacity,
-        strokeColor: color,
-        strokeOpacity: opacity * 1.2,
-        strokeWeight: 1,
+        strokeColor: strokeColor,
+        strokeOpacity: 0.95,
+        strokeWeight: isLow ? 2.2 : 1.8,
         map: mapInstance
       });
       newObjects.push(circle);
     });
 
-    // Render top 25 high impact clickable pins
-    const topHigh = events.filter(e => e.tier === "High").slice(0, 25);
-    topHigh.forEach(ev => {
+    // Render clickable marker pins across all tiers (High: Dark Red, Med: Dark Yellow, Low: Dark Green)
+    // Ensures Low tier events are clearly marked with their own dark green pins
+    const displayEvents = events.slice(0, 100);
+    displayEvents.forEach(ev => {
+      const isHigh = ev.tier === "High";
+      const isMed = ev.tier === "Medium";
+      const isLow = ev.tier === "Low" || (!isHigh && !isMed);
+
+      const pinColor = isHigh ? "#B91C1C" : isMed ? "#D97706" : "#15803D";
+      const pinBorder = isHigh ? "#FECACA" : isMed ? "#FEF08A" : "#BBF7D0";
+      const badgeBg = isHigh ? "#7F1D1D" : isMed ? "#78350F" : "#14532D";
+
       const marker = new window.google.maps.Marker({
         position: { lat: ev.lat, lng: ev.lng },
         map: mapInstance,
-        title: `${ev.cause} (${ev.corridor})`,
+        title: `[${ev.tier}] ${ev.cause} (${ev.corridor})`,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 5,
-          fillColor: "#EF4444",
-          fillOpacity: 0.95,
-          strokeColor: "#FFFFFF",
-          strokeWeight: 1.5
+          scale: isHigh ? 6.5 : isMed ? 5.5 : 5,
+          fillColor: pinColor,
+          fillOpacity: 1.0,
+          strokeColor: pinBorder,
+          strokeWeight: 1.8
         }
       });
 
       marker.addListener("click", () => {
         infoWindow.setContent(`
-          <div style="font-family:'Segoe UI',sans-serif;color:#E2E8F0;background:#0F1729;padding:8px 12px;border-radius:6px;">
-            <strong style="color:#EF4444;font-size:0.95rem;">🚨 ${ev.cause}</strong><br>
-            <div style="font-size:0.8rem;margin-top:4px;">
+          <div style="font-family:'Segoe UI',sans-serif;color:#E2E8F0;background:#0F1729;padding:10px 14px;border-radius:8px;border:1px solid ${pinColor};min-width:190px;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+              <span style="background:${badgeBg};color:#FFFFFF;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:700;text-transform:uppercase;">
+                ${ev.tier} Impact
+              </span>
+              <strong style="color:${isHigh ? '#F87171' : isMed ? '#FCD34D' : '#86EFAC'};font-size:0.92rem;">
+                ${ev.cause}
+              </strong>
+            </div>
+            <div style="font-size:0.8rem;line-height:1.5;">
               <b>Corridor:</b> ${ev.corridor}<br>
-              <b>Impact Tier:</b> <span style="color:#FCA5A5;font-weight:bold;">${ev.tier}</span><br>
-              <b>Resolution:</b> ${ev.duration} mins
+              <b>Estimated Clearance:</b> ${ev.duration} mins<br>
+              ${ev.requires_closure ? '<span style="color:#EF4444;font-weight:bold;">⚠️ Road Closure Active</span>' : '<span style="color:#86EFAC;">Road Open</span>'}
             </div>
           </div>
         `);
@@ -435,7 +455,7 @@ export default function GoogleMapComponent({
     // Epicenter Pin
     const isHigh = incident.tier === "High";
     const isMed = incident.tier === "Medium";
-    const incColor = isHigh ? "#EF4444" : isMed ? "#F59E0B" : incident.tier ? "#10B981" : "#38BDF8";
+    const incColor = isHigh ? "#B91C1C" : isMed ? "#D97706" : incident.tier ? "#15803D" : "#38BDF8";
 
     const incMarker = new window.google.maps.Marker({
       position: { lat: incident.lat, lng: incident.lng },
@@ -758,14 +778,28 @@ export default function GoogleMapComponent({
         </label>
 
         {mode === "density" && (
-          <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: "600" }}>
-            <input
-              type="checkbox"
-              checked={showHotspots}
-              onChange={(e) => setShowHotspots(e.target.checked)}
-            />
-            🔥 Disruption Hotspots
-          </label>
+          <>
+            <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: "600" }}>
+              <input
+                type="checkbox"
+                checked={showHotspots}
+                onChange={(e) => setShowHotspots(e.target.checked)}
+              />
+              🔥 Disruption Hotspots
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", borderLeft: "1px solid rgba(255,255,255,0.12)", paddingLeft: "10px" }}>
+              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>Tiers:</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#FCA5A5", fontWeight: "600" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#B91C1C", border: "1px solid #FECACA", display: "inline-block" }}></span> High
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#FCD34D", fontWeight: "600" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#D97706", border: "1px solid #FEF08A", display: "inline-block" }}></span> Med
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", color: "#86EFAC", fontWeight: "600" }}>
+                <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#15803D", border: "1px solid #BBF7D0", display: "inline-block" }}></span> Low
+              </span>
+            </div>
+          </>
         )}
       </div>
 

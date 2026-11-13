@@ -66,9 +66,9 @@ export default function HeatmapTab({ config, apiKey }) {
             onChange={(e) => setTier(e.target.value)}
           >
             <option value="All">All Tiers</option>
-            <option value="High">🔴 High</option>
-            <option value="Medium">🟡 Medium</option>
-            <option value="Low">🟢 Low</option>
+            <option value="High">🔴 High (Dark Red)</option>
+            <option value="Medium">🟡 Medium (Dark Yellow)</option>
+            <option value="Low">🟢 Low (Dark Green)</option>
           </select>
         </div>
 
