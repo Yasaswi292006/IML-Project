@@ -7,8 +7,8 @@ import csv
 import pandas as pd
 import numpy as np
 from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, Request
+from fastapi.responses import PlainTextResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -1543,10 +1543,44 @@ def get_model_performance():
 
 from fastapi.staticfiles import StaticFiles
 
-# Serve built React frontend at root
+# Serve built React frontend with dedicated Government Page Routes
 FRONTEND_DIST = os.path.join(ROOT, "frontend", "dist")
 if os.path.exists(FRONTEND_DIST):
+    # Mount assets folder
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    # Dedicated Government Portal Separate Page Endpoints
+    PORTAL_INDEX = os.path.join(FRONTEND_DIST, "index.html")
+
+    @app.get("/", response_class=FileResponse)
+    @app.get("/overview", response_class=FileResponse)
+    @app.get("/predict", response_class=FileResponse)
+    @app.get("/predict-and-respond", response_class=FileResponse)
+    @app.get("/heatmap", response_class=FileResponse)
+    @app.get("/map-and-heatmap", response_class=FileResponse)
+    @app.get("/batch", response_class=FileResponse)
+    @app.get("/batch-triage", response_class=FileResponse)
+    @app.get("/preevent", response_class=FileResponse)
+    @app.get("/pre-event", response_class=FileResponse)
+    @app.get("/pre-event-planner", response_class=FileResponse)
+    @app.get("/model", response_class=FileResponse)
+    @app.get("/model-performance", response_class=FileResponse)
+    def serve_portal_page():
+        return FileResponse(PORTAL_INDEX)
+
+    # Fallback mount for other root static files (favicon.ico, logo.png, etc.)
     app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc):
+    if not request.url.path.startswith("/api/"):
+        portal_index = os.path.join(FRONTEND_DIST, "index.html")
+        if os.path.exists(portal_index):
+            return FileResponse(portal_index)
+    return JSONResponse(status_code=404, content={"detail": f"Resource not found: {request.url.path}"})
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Routes,
+  Route,
+  Link,
+  useLocation,
+  useNavigate,
+  Navigate
+} from 'react-router-dom';
+import {
   LayoutDashboard,
   Navigation,
   Layers,
@@ -11,7 +19,8 @@ import {
   Server,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 import OverviewTab from './components/OverviewTab';
 import PredictTab from './components/PredictTab';
@@ -22,14 +31,80 @@ import ModelPerformanceTab from './components/ModelPerformanceTab';
 
 const API_BASE = "http://127.0.0.1:8000";
 
+const NAV_PAGES = [
+  {
+    id: "overview",
+    path: "/overview",
+    altPaths: ["/"],
+    label: "🏠 Overview",
+    title: "Overview & Real-Time Key Performance Indicators",
+    browserTitle: "ASTER — Bengaluru Traffic Intelligence & Tactical Decision Support",
+    icon: LayoutDashboard
+  },
+  {
+    id: "predict",
+    path: "/predict",
+    altPaths: ["/predict-and-respond"],
+    label: "🔮 Predict & Respond",
+    title: "Predict & Respond — Tactical Incident Triage & Manpower Dispatch",
+    browserTitle: "Predict & Respond — ASTER Traffic Police Decision Support",
+    icon: Navigation
+  },
+  {
+    id: "heatmap",
+    path: "/heatmap",
+    altPaths: ["/map-and-heatmap"],
+    label: "🗺️ Map & Heatmap",
+    title: "Spatial Map & Corridor Congestion Density Heatmap",
+    browserTitle: "Map & Corridor Heatmap — ASTER Decision Support",
+    icon: Layers
+  },
+  {
+    id: "batch",
+    path: "/batch",
+    altPaths: ["/batch-triage"],
+    label: "📦 Batch Triage",
+    title: "Batch Incident Triage — Automated 46-Column Priority Ranking",
+    browserTitle: "Batch Incident Triage — ASTER Tactical System",
+    icon: Boxes
+  },
+  {
+    id: "preevent",
+    path: "/preevent",
+    altPaths: ["/pre-event", "/pre-event-planner"],
+    label: "📅 Pre-Event Planner",
+    title: "Pre-Event Disruption Mitigation & Tactical Crowd Planning",
+    browserTitle: "Pre-Event Traffic Planner — ASTRAM System",
+    icon: Calendar
+  },
+  {
+    id: "model",
+    path: "/model",
+    altPaths: ["/model-performance"],
+    label: "📈 Model Performance",
+    title: "Machine Learning Evaluation Benchmarks & Metrics",
+    browserTitle: "Model Benchmarks & Metrics — ASTER AI Pipeline",
+    icon: Activity
+  }
+];
+
 export default function App() {
-  const initialTab = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab")) || "overview";
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [config, setConfig] = useState(null);
   const [overviewData, setOverviewData] = useState(null);
   const [eventsData, setEventsData] = useState([]);
   const [connected, setConnected] = useState(false);
+
+  // Identify active page based on current URL path
+  const currentPath = location.pathname;
+  const currentPage = NAV_PAGES.find(p => p.path === currentPath || (p.altPaths && p.altPaths.includes(currentPath))) || NAV_PAGES[0];
+
+  // Dynamically update document title to reflect the active page (standard for government portals)
+  useEffect(() => {
+    document.title = currentPage.browserTitle;
+  }, [currentPage]);
 
   // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar (ChatGPT style)
   useEffect(() => {
@@ -69,24 +144,12 @@ export default function App() {
       .catch(err => console.error("Events fetch error:", err));
   }, []);
 
-  const navItems = [
-    { id: "overview", label: "🏠 Overview", icon: LayoutDashboard },
-    { id: "predict", label: "🔮 Predict & Respond", icon: Navigation },
-    { id: "heatmap", label: "🗺️ Map & Heatmap", icon: Layers },
-    { id: "batch", label: "📦 Batch Triage", icon: Boxes },
-    { id: "preevent", label: "📅 Pre-Event Planner", icon: Calendar },
-    { id: "model", label: "📈 Model Performance", icon: Activity }
-  ];
-
-  const currentTabItem = navItems.find(item => item.id === activeTab) || navItems[0];
-
   return (
     <div className="app-container">
       {/* ─────────────────────────────────────────────────────────────
           1. TOP NAVIGATION BAR (Clean header with toggle & branding only)
          ───────────────────────────────────────────────────────────── */}
       <header className="top-navbar">
-        {/* Left: Sidebar Toggle + Brand Logo & Title */}
         <div className="top-navbar-left">
           <button
             onClick={() => setSidebarOpen(prev => !prev)}
@@ -97,10 +160,11 @@ export default function App() {
             {sidebarOpen ? <PanelLeftClose size={19} /> : <PanelLeftOpen size={19} />}
           </button>
 
-          <div
+          <Link
+            to="/overview"
             className="top-navbar-brand"
-            onClick={() => setActiveTab("overview")}
-            title="Return to Overview"
+            style={{ textDecoration: "none" }}
+            title="Return to Home / Overview"
           >
             <img src="/logo.png" alt="ASTER" />
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -109,12 +173,12 @@ export default function App() {
                 Traffic AI
               </span>
             </div>
-          </div>
+          </Link>
         </div>
       </header>
 
       {/* ─────────────────────────────────────────────────────────────
-          2. BODY: COLLAPSIBLE SCROLLABLE SIDEBAR + MAIN WORKSPACE
+          2. BODY: COLLAPSIBLE SCROLLABLE SIDEBAR + ROUTED PAGE CONTENT
          ───────────────────────────────────────────────────────────── */}
       <div className="app-body">
         {/* Left Sidebar (ChatGPT-style toggle & smooth collapse) */}
@@ -148,20 +212,21 @@ export default function App() {
             </button>
           </div>
 
-          {/* Navigation Menu */}
+          {/* Navigation Menu with Real Page Links */}
           <div className="nav-menu">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
+            {NAV_PAGES.map((page) => {
+              const Icon = page.icon;
+              const isActive = currentPage.id === page.id;
               return (
-                <div
-                  key={item.id}
+                <Link
+                  key={page.id}
+                  to={page.path}
                   className={`nav-item ${isActive ? "active" : ""}`}
-                  onClick={() => setActiveTab(item.id)}
+                  style={{ textDecoration: "none" }}
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
-                </div>
+                  <span>{page.label}</span>
+                </Link>
               );
             })}
           </div>
@@ -188,42 +253,154 @@ export default function App() {
           </div>
         </aside>
 
-        {/* Main Content Area */}
+        {/* Main Content Area: Renders Dedicated Page Routes */}
         <main className="main-content">
-          {/* Active View Render */}
-          {activeTab === "overview" && (
-            <OverviewTab
-              overviewData={overviewData}
-              eventsData={eventsData}
-              apiKey={config?.google_maps_api_key}
+          {/* Government Portal Breadcrumb Banner */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "18px",
+            padding: "8px 14px",
+            background: "rgba(15, 23, 42, 0.45)",
+            border: "1px solid rgba(255, 255, 255, 0.05)",
+            borderRadius: "8px",
+            fontSize: "0.76rem",
+            color: "var(--text-muted)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>Government of Karnataka</span>
+              <ChevronRight size={12} />
+              <span>Bengaluru Traffic Police (BTP)</span>
+              <ChevronRight size={12} />
+              <span style={{ color: "#93C5FD", fontWeight: "600" }}>{currentPage.title}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: "monospace", color: "#64748B" }}>
+              <span>URL:</span>
+              <code style={{ color: "#38BDF8", background: "rgba(56, 189, 248, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
+                {currentPath}
+              </code>
+            </div>
+          </div>
+
+          <Routes>
+            {/* Page 1: Overview */}
+            <Route
+              path="/"
+              element={
+                <OverviewTab
+                  overviewData={overviewData}
+                  eventsData={eventsData}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
             />
-          )}
-
-          {activeTab === "predict" && (
-            <PredictTab
-              config={config}
-              apiKey={config?.google_maps_api_key}
+            <Route
+              path="/overview"
+              element={
+                <OverviewTab
+                  overviewData={overviewData}
+                  eventsData={eventsData}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
             />
-          )}
 
-          {activeTab === "heatmap" && (
-            <HeatmapTab
-              config={config}
-              apiKey={config?.google_maps_api_key}
+            {/* Page 2: Predict and Respond */}
+            <Route
+              path="/predict"
+              element={
+                <PredictTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
             />
-          )}
+            <Route
+              path="/predict-and-respond"
+              element={
+                <PredictTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
 
-          {activeTab === "batch" && (
-            <BatchTriageTab />
-          )}
+            {/* Page 3: Map and Heatmap */}
+            <Route
+              path="/heatmap"
+              element={
+                <HeatmapTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
+            <Route
+              path="/map-and-heatmap"
+              element={
+                <HeatmapTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
 
-          {activeTab === "preevent" && (
-            <PreEventTab config={config} apiKey={config?.google_maps_api_key} />
-          )}
+            {/* Page 4: Batch Triage */}
+            <Route
+              path="/batch"
+              element={<BatchTriageTab />}
+            />
+            <Route
+              path="/batch-triage"
+              element={<BatchTriageTab />}
+            />
 
-          {activeTab === "model" && (
-            <ModelPerformanceTab />
-          )}
+            {/* Page 5: Pre-Event Planner */}
+            <Route
+              path="/preevent"
+              element={
+                <PreEventTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
+            <Route
+              path="/pre-event"
+              element={
+                <PreEventTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
+            <Route
+              path="/pre-event-planner"
+              element={
+                <PreEventTab
+                  config={config}
+                  apiKey={config?.google_maps_api_key}
+                />
+              }
+            />
+
+            {/* Page 6: Model Performance */}
+            <Route
+              path="/model"
+              element={<ModelPerformanceTab />}
+            />
+            <Route
+              path="/model-performance"
+              element={<ModelPerformanceTab />}
+            />
+
+            {/* Catch-all redirect to Overview */}
+            <Route
+              path="*"
+              element={<Navigate to="/overview" replace />}
+            />
+          </Routes>
         </main>
       </div>
     </div>
