@@ -67,7 +67,17 @@ export default function App() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="brand-header">
-          <div style={{ fontSize: "1.8rem" }}>🚦</div>
+          <img
+            src="/logo.png"
+            alt="ASTER Logo"
+            style={{
+              width: "40px",
+              height: "40px",
+              objectFit: "contain",
+              borderRadius: "8px",
+              filter: "drop-shadow(0 0 10px rgba(59, 130, 246, 0.45))"
+            }}
+          />
           <div>
             <div className="brand-title">ASTER</div>
             <div className="brand-subtitle">Smart Traffic AI</div>
