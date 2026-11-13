@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Clock, MapPin, ShieldAlert, TrendingUp, Radio,
   Calendar, Users, Shield, CheckCircle2, ChevronRight, Eye, X,
@@ -8,6 +9,7 @@ import {
 import GoogleMapComponent from './GoogleMapComponent';
 
 export default function OverviewTab({ overviewData, eventsData, apiKey }) {
+  const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const [liveEvents, setLiveEvents] = useState([]);
   const [completedEvents, setCompletedEvents] = useState([]);
@@ -147,7 +149,7 @@ export default function OverviewTab({ overviewData, eventsData, apiKey }) {
       {/* ─────────────────────────────────────────────────────────────
           1. LIVE PRE-PLANNED OPERATIONS BULLETIN (Active Dashboard Notification)
          ───────────────────────────────────────────────────────────── */}
-      {liveEvents.length > 0 && (
+      {liveEvents.length > 0 ? (
         <div style={{
           background: "linear-gradient(135deg, rgba(185, 28, 28, 0.15) 0%, rgba(30, 41, 59, 0.9) 100%)",
           border: "1px solid rgba(239, 68, 68, 0.5)",
@@ -170,9 +172,47 @@ export default function OverviewTab({ overviewData, eventsData, apiKey }) {
                 <span>🚨</span> Live Pre-Planned Events Bulletin ({liveEvents.length} Active Operational Plan{liveEvents.length > 1 ? "s" : ""})
               </h3>
             </div>
-            <span style={{ fontSize: "0.75rem", background: "rgba(239,68,68,0.25)", color: "#FECACA", padding: "3px 10px", borderRadius: "12px", border: "1px solid rgba(239,68,68,0.5)", fontWeight: "700" }}>
-              ● LIVE OPERATION BROADCASTING ON DASHBOARD
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => navigate('/preevent')}
+                style={{
+                  background: "rgba(59, 130, 246, 0.2)",
+                  border: "1px solid rgba(59, 130, 246, 0.5)",
+                  color: "#93C5FD",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>📅 Pre-Event Planner ➔</span>
+              </button>
+              <button
+                onClick={refreshPreEvents}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "#E2E8F0",
+                  padding: "5px 9px",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+                title="Refresh pre-events feed"
+              >
+                <RefreshCw size={13} />
+              </button>
+              <span style={{ fontSize: "0.75rem", background: "rgba(239,68,68,0.25)", color: "#FECACA", padding: "3px 10px", borderRadius: "12px", border: "1px solid rgba(239,68,68,0.5)", fontWeight: "700" }}>
+                ● LIVE OPERATION BROADCASTING ON DASHBOARD
+              </span>
+            </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -264,6 +304,42 @@ export default function OverviewTab({ overviewData, eventsData, apiKey }) {
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div style={{
+          background: "rgba(15, 23, 42, 0.6)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderRadius: "10px",
+          padding: "12px 20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "10px",
+          fontSize: "0.82rem"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
+            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#10B981" }}></span>
+            <span>No active live pre-planned operations in progress. All city corridors operating under standard baseline signal phasing.</span>
+          </div>
+          <button
+            onClick={() => navigate('/preevent')}
+            style={{
+              background: "rgba(59, 130, 246, 0.15)",
+              border: "1px solid rgba(59, 130, 246, 0.35)",
+              color: "#93C5FD",
+              padding: "5px 12px",
+              borderRadius: "6px",
+              fontSize: "0.78rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <span>+ Plan Pre-Event in Planner ➔</span>
+          </button>
         </div>
       )}
 

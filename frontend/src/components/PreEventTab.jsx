@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, Shield, MapPin, CheckSquare, Search, Download, Copy,
   Check, Save, AlertTriangle, Layers, Navigation, ArrowRight, Clock,
-  FileText, CheckCircle2, ChevronDown, ChevronRight, Sliders, Radio, Sparkles,
-  Car, Compass, RefreshCw, Send, AlertOctagon, Info, X
+  FileText, CheckCircle2, ChevronDown, ChevronUp, ChevronRight, Sliders, Radio, Sparkles,
+  Car, Compass, RefreshCw, Send, AlertOctagon, Info, X, Database, Trash2, ExternalLink, Eye, Archive
 } from 'lucide-react';
 import GoogleMapComponent from './GoogleMapComponent';
 
@@ -260,6 +261,16 @@ export default function PreEventTab({ config, apiKey }) {
   const [showInspector, setShowInspector] = useState(true);
   const [showTemplatesDrawer, setShowTemplatesDrawer] = useState(false);
 
+  // Operations Database & Navigation State
+  const navigate = useNavigate();
+  const [dbEvents, setDbEvents] = useState([]);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbFilter, setDbFilter] = useState("all"); // 'all' | 'live' | 'completed'
+  const [dbSearch, setDbSearch] = useState("");
+  const [selectedPlanModal, setSelectedPlanModal] = useState(null);
+  const [concludingDbId, setConcludingDbId] = useState(null);
+  const [highlightedEventId, setHighlightedEventId] = useState(null);
+
   // Apply a preset
   const applyPreset = (p) => {
     setDescription(p.description);
@@ -347,6 +358,80 @@ export default function PreEventTab({ config, apiKey }) {
     }
   }, [pinMode, lat, lng, endLat, endLng]);
 
+  // ─────────────────────────────────────────────────────────────
+  // Operations Database CRUD & Lifecycle Handlers
+  // ─────────────────────────────────────────────────────────────
+  const fetchDbEvents = async () => {
+    setDbLoading(true);
+    try {
+      const resp = await fetch("http://127.0.0.1:8000/api/pre-events?status=all");
+      if (resp.ok) {
+        const data = await resp.json();
+        setDbEvents(data);
+      }
+    } catch (err) {
+      console.warn("Could not fetch pre-events db:", err);
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbEvents();
+  }, []);
+
+  // Conclude event handler from inside PreEvent planner
+  const handleConcludeDbEvent = async (eventItem) => {
+    setConcludingDbId(eventItem.id);
+    try {
+      const resp = await fetch(`http://127.0.0.1:8000/api/pre-events/${eventItem.id}/conclude`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          concluded_by: "BTP Central Command Operations Controller",
+          notes: "Operational execution concluded successfully. Corridors returned to standard traffic phasing."
+        })
+      });
+
+      if (!resp.ok) {
+        const errJson = await resp.json();
+        throw new Error(errJson.detail || "Failed to conclude event.");
+      }
+
+      await fetchDbEvents();
+      if (selectedPlanModal?.id === eventItem.id) {
+        setSelectedPlanModal(null);
+      }
+      setSaveToast({
+        title: "✅ Operation Concluded & Archived",
+        message: `Operation '${eventItem.title || eventItem.id}' is closed from live notifications and registered into Priorly Conducted Events.`
+      });
+      setTimeout(() => setSaveToast(null), 5000);
+    } catch (err) {
+      alert(`Error concluding event: ${err.message}`);
+    } finally {
+      setConcludingDbId(null);
+    }
+  };
+
+  // Delete event from DB
+  const handleDeleteDbEvent = async (eventIdToDelete) => {
+    if (!window.confirm(`Are you sure you want to delete event record '${eventIdToDelete}' from the database?`)) return;
+    try {
+      const resp = await fetch(`http://127.0.0.1:8000/api/pre-events/${eventIdToDelete}`, {
+        method: "DELETE"
+      });
+      if (resp.ok) {
+        await fetchDbEvents();
+        if (selectedPlanModal?.id === eventIdToDelete) {
+          setSelectedPlanModal(null);
+        }
+      }
+    } catch (err) {
+      alert(`Error deleting record: ${err.message}`);
+    }
+  };
+
   // Run Pre-Event Response Plan & Audit
   const handleSimulate = async () => {
     setLoading(true);
@@ -406,9 +491,11 @@ export default function PreEventTab({ config, apiKey }) {
 
       const data = await resp.json();
       setSimulationResult(data);
+      return data;
     } catch (err) {
       console.error("Pre-event simulation error:", err);
       alert(`Simulation Error: ${err.message}`);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -423,16 +510,17 @@ export default function PreEventTab({ config, apiKey }) {
   const handleSaveToDatabase = async () => {
     let currentSim = simulationResult;
     if (!currentSim?.astram_record) {
-      await handleSimulate();
-      currentSim = simulationResult;
+      currentSim = await handleSimulate();
+      if (!currentSim) return;
     }
     const recordToSave = currentSim?.astram_record;
 
     setSaveLoading(true);
     try {
+      const genId = eventId || `ASTRAM-PLAN-${Date.now()}`;
       const fullPlanPayload = {
-        id: eventId || `ASTRAM-PLAN-${Date.now()}`,
-        title: `${cause === "public_event" ? "🏏" : cause === "vip_movement" ? "🚗" : cause === "procession" ? "🎪" : "📅"} ${eventType || "Planned Event"} — ${corridor}`,
+        id: genId,
+        title: `${cause === "public_event" ? "🏏" : cause === "vip_movement" ? "🚗" : cause === "procession" ? "🎪" : "📅"} ${description || eventType || "Planned Event"} — ${corridor}`,
         event_type: eventType,
         event_cause: cause,
         description: description,
@@ -474,11 +562,22 @@ export default function PreEventTab({ config, apiKey }) {
       }
 
       const resData = await resp.json();
+      await fetchDbEvents();
+      setHighlightedEventId(genId);
+
       setSaveToast({
-        title: "🚀 Pre-Event Live on Operations Dashboard!",
-        message: `${resData.message} Plan and execution details now live in operational bulletin.`
+        title: "🚀 Pre-Event Stored in Database & Live on Dashboard!",
+        message: `${resData.message} Stored below in the operations database and broadcasting live on the Overview dashboard.`,
+        eventId: genId
       });
-      setTimeout(() => setSaveToast(null), 6000);
+
+      // Smooth scroll to database section
+      setTimeout(() => {
+        const el = document.getElementById("preevent-database-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+
+      setTimeout(() => setSaveToast(null), 8000);
     } catch (err) {
       alert(`Database Publish Error: ${err.message}`);
     } finally {
@@ -559,20 +658,61 @@ export default function PreEventTab({ config, apiKey }) {
           right: "32px",
           background: "#064E3B",
           border: "1px solid #10B981",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.6)",
           color: "#ECFDF5",
-          padding: "14px 20px",
+          padding: "16px 22px",
           borderRadius: "10px",
           fontSize: "0.88rem",
           zIndex: 1000,
           display: "flex",
-          alignItems: "center",
-          gap: "12px"
+          flexDirection: "column",
+          gap: "10px",
+          maxWidth: "500px"
         }}>
-          <CheckCircle2 color="#34D399" size={22} />
-          <div>
-            <div style={{ fontWeight: "700", color: "#A7F3D0" }}>{saveToast.title}</div>
-            <div style={{ fontSize: "0.8rem", color: "#D1FAE5", marginTop: "2px" }}>{saveToast.message}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <CheckCircle2 color="#34D399" size={24} style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: "700", color: "#A7F3D0", fontSize: "0.95rem" }}>{saveToast.title}</div>
+              <div style={{ fontSize: "0.82rem", color: "#D1FAE5", marginTop: "3px", lineHeight: "1.35" }}>{saveToast.message}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+            <button
+              onClick={() => navigate('/overview')}
+              style={{
+                background: "#10B981",
+                color: "#064E3B",
+                border: "none",
+                borderRadius: "6px",
+                padding: "7px 14px",
+                fontSize: "0.82rem",
+                fontWeight: "700",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <ExternalLink size={13} /> View Live Bulletin on Dashboard ➔
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById("preevent-database-section");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                color: "#ECFDF5",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: "6px",
+                padding: "7px 12px",
+                fontSize: "0.82rem",
+                fontWeight: "600",
+                cursor: "pointer"
+              }}
+            >
+              Inspect in Database Below ↓
+            </button>
           </div>
         </div>
       )}
@@ -604,11 +744,34 @@ export default function PreEventTab({ config, apiKey }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Operations Database Jump Button */}
+          <button
+            onClick={() => {
+              const el = document.getElementById("preevent-database-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="btn-secondary"
+            style={{
+              fontSize: "0.8rem",
+              padding: "8px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              background: "rgba(59, 130, 246, 0.15)",
+              borderColor: "#3B82F6",
+              color: "#93C5FD"
+            }}
+            title="Jump to the pre-planned events database and registry below"
+          >
+            <Database size={15} color="#60A5FA" />
+            <span>Operations Database ({dbEvents.length}) ↓</span>
+          </button>
+
           {/* Subtle Quick Load Dropdown */}
           <select
             className="form-select"
             style={{
-              width: "230px",
+              width: "210px",
               padding: "8px 12px",
               fontSize: "0.8rem",
               background: "rgba(15, 23, 42, 0.8)",
@@ -621,7 +784,7 @@ export default function PreEventTab({ config, apiKey }) {
             }}
             value=""
           >
-            <option value="" disabled>📁 Load Template (Optional)...</option>
+            <option value="" disabled>📁 Load Template...</option>
             {PRESETS.map((p, idx) => (
               <option key={idx} value={p.name}>{p.name}</option>
             ))}
@@ -651,6 +814,72 @@ export default function PreEventTab({ config, apiKey }) {
           }}>
             <CheckCircle2 size={15} /> 46 / 46 ASTRAM READY
           </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          QUICK DATABASE STATUS RIBBON
+         ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: "rgba(15, 23, 42, 0.75)",
+        border: "1px solid rgba(59, 130, 246, 0.25)",
+        borderRadius: "10px",
+        padding: "12px 20px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+        fontSize: "0.84rem"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#E2E8F0" }}>
+          <Database size={17} color="#60A5FA" />
+          <span>
+            <strong style={{ color: "#93C5FD" }}>Central Operations Database:</strong>{" "}
+            <span style={{ color: "#FCA5A5", fontWeight: "700" }}>{dbEvents.filter(e => e.status === "live").length} Live</span> Broadcasting on Dashboard •{" "}
+            <span style={{ color: "#86EFAC", fontWeight: "700" }}>{dbEvents.filter(e => e.status === "completed").length} Priorly Conducted</span> Archive Records
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            onClick={() => {
+              const el = document.getElementById("preevent-database-section");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            style={{
+              background: "rgba(59, 130, 246, 0.15)",
+              border: "1px solid rgba(59, 130, 246, 0.35)",
+              color: "#93C5FD",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Database size={13} /> View Database Below ({dbEvents.length}) ↓
+          </button>
+          <button
+            onClick={() => navigate('/overview')}
+            style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              color: "#FCA5A5",
+              padding: "6px 14px",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "700",
+              fontSize: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Radio size={13} color="#EF4444" /> Go to Live Dashboard Bulletin ➔
+          </button>
         </div>
       </div>
 
@@ -1596,6 +1825,716 @@ export default function PreEventTab({ config, apiKey }) {
         </div>
 
       </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          6. PRE-PLANNED OPERATIONS DATABASE & LIVE REGISTRY
+         ───────────────────────────────────────────────────────────── */}
+      <section
+        id="preevent-database-section"
+        style={{
+          background: "linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9))",
+          border: "1px solid rgba(59, 130, 246, 0.4)",
+          borderRadius: "14px",
+          padding: "24px 28px",
+          boxShadow: "0 14px 40px rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "20px"
+        }}
+      >
+        {/* Section Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{
+                background: "rgba(59, 130, 246, 0.2)",
+                padding: "8px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid rgba(59, 130, 246, 0.4)"
+              }}>
+                <Database size={22} color="#60A5FA" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "800", color: "#F8FAFC", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>🗄️</span> Pre-Planned Operations Database & Central Registry
+                </h3>
+                <p style={{ margin: "3px 0 0", fontSize: "0.82rem", color: "var(--text-secondary)" }}>
+                  Central persistent store for pre-planned disruptions. Live events broadcast directly to the Dashboard bulletin; concluded events archive to historical records.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => navigate('/overview')}
+              style={{
+                background: "rgba(239, 68, 68, 0.15)",
+                border: "1px solid rgba(239, 68, 68, 0.5)",
+                color: "#FCA5A5",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "700",
+                fontSize: "0.82rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+              title="Navigate to Central Operations Dashboard to view the live broadcast beacon"
+            >
+              <Radio size={15} color="#EF4444" />
+              <span>Go to Live Dashboard Bulletin ➔</span>
+            </button>
+
+            <button
+              onClick={fetchDbEvents}
+              disabled={dbLoading}
+              className="btn-secondary"
+              style={{ padding: "8px 14px", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "6px" }}
+              title="Refresh database records"
+            >
+              <RefreshCw size={14} className={dbLoading ? "animate-spin" : ""} />
+              <span>{dbLoading ? "Refreshing..." : "Refresh DB"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Bar & Search */}
+        <div style={{
+          background: "rgba(15, 23, 42, 0.7)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "10px",
+          padding: "12px 16px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "14px"
+        }}>
+          {/* Status Tabs */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              onClick={() => setDbFilter("all")}
+              style={{
+                background: dbFilter === "all" ? "#2563EB" : "rgba(255,255,255,0.06)",
+                color: dbFilter === "all" ? "#FFFFFF" : "var(--text-secondary)",
+                border: "none",
+                borderRadius: "6px",
+                padding: "6px 14px",
+                fontSize: "0.82rem",
+                fontWeight: "700",
+                cursor: "pointer"
+              }}
+            >
+              All Records ({dbEvents.length})
+            </button>
+
+            <button
+              onClick={() => setDbFilter("live")}
+              style={{
+                background: dbFilter === "live" ? "#DC2626" : "rgba(220, 38, 38, 0.12)",
+                color: dbFilter === "live" ? "#FFFFFF" : "#FCA5A5",
+                border: `1px solid ${dbFilter === "live" ? "#DC2626" : "rgba(220, 38, 38, 0.3)"}`,
+                borderRadius: "6px",
+                padding: "6px 14px",
+                fontSize: "0.82rem",
+                fontWeight: "700",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "#EF4444" }}></span>
+              ● Live Operations ({dbEvents.filter(e => e.status === "live").length})
+            </button>
+
+            <button
+              onClick={() => setDbFilter("completed")}
+              style={{
+                background: dbFilter === "completed" ? "#059669" : "rgba(16, 185, 129, 0.12)",
+                color: dbFilter === "completed" ? "#FFFFFF" : "#86EFAC",
+                border: `1px solid ${dbFilter === "completed" ? "#059669" : "rgba(16, 185, 129, 0.3)"}`,
+                borderRadius: "6px",
+                padding: "6px 14px",
+                fontSize: "0.82rem",
+                fontWeight: "700",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <CheckCircle2 size={13} />
+              Priorly Conducted ({dbEvents.filter(e => e.status === "completed").length})
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div style={{ position: "relative", minWidth: "260px" }}>
+            <Search size={15} color="var(--text-muted)" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)" }} />
+            <input
+              type="text"
+              placeholder="Search by title, corridor, station, ID..."
+              value={dbSearch}
+              onChange={(e) => setDbSearch(e.target.value)}
+              style={{
+                width: "100%",
+                background: "rgba(30, 41, 59, 0.7)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "6px",
+                padding: "7px 12px 7px 32px",
+                color: "#F8FAFC",
+                fontSize: "0.82rem"
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Database List / Cards */}
+        {(() => {
+          const filtered = dbEvents.filter(e => {
+            if (dbFilter === "live" && e.status !== "live") return false;
+            if (dbFilter === "completed" && e.status !== "completed") return false;
+            if (!dbSearch) return true;
+            const term = dbSearch.toLowerCase();
+            return (
+              (e.title && e.title.toLowerCase().includes(term)) ||
+              (e.corridor && e.corridor.toLowerCase().includes(term)) ||
+              (e.police_station && e.police_station.toLowerCase().includes(term)) ||
+              (e.junction && e.junction.toLowerCase().includes(term)) ||
+              (e.id && e.id.toLowerCase().includes(term))
+            );
+          });
+
+          if (filtered.length === 0) {
+            return (
+              <div style={{
+                textAlign: "center",
+                padding: "36px 20px",
+                background: "rgba(15, 23, 42, 0.4)",
+                borderRadius: "10px",
+                border: "1px dashed rgba(255, 255, 255, 0.15)",
+                color: "var(--text-secondary)"
+              }}>
+                <Database size={32} color="#64748B" style={{ margin: "0 auto 10px" }} />
+                <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#E2E8F0" }}>No Database Records Found</div>
+                <div style={{ fontSize: "0.8rem", color: "#94A3B8", marginTop: "4px" }}>
+                  {dbEvents.length === 0 ? "No pre-planned events have been saved to the database yet. Click 'Publish Live to Dashboard & Database' above to create one." : "No records match the current filter or search criteria."}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {filtered.map((ev) => {
+                const isLive = ev.status === "live";
+                const isHighlighted = highlightedEventId === ev.id;
+
+                return (
+                  <div
+                    key={ev.id}
+                    style={{
+                      background: isLive
+                        ? "linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(185, 28, 28, 0.12))"
+                        : "rgba(15, 23, 42, 0.8)",
+                      border: isHighlighted
+                        ? "2px solid #10B981"
+                        : isLive
+                        ? "1px solid rgba(239, 68, 68, 0.4)"
+                        : "1px solid rgba(255, 255, 255, 0.08)",
+                      borderRadius: "10px",
+                      padding: "16px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "16px",
+                      boxShadow: isHighlighted ? "0 0 20px rgba(16, 185, 129, 0.3)" : "none",
+                      transition: "all 0.3s ease"
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: "320px" }}>
+                      {/* Top Badges */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
+                        <span style={{
+                          background: isLive ? "rgba(239, 68, 68, 0.25)" : "rgba(16, 185, 129, 0.2)",
+                          color: isLive ? "#FECACA" : "#86EFAC",
+                          border: `1px solid ${isLive ? "#EF4444" : "#10B981"}`,
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontWeight: "800",
+                          fontSize: "0.72rem",
+                          letterSpacing: "0.04em",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px"
+                        }}>
+                          {isLive ? (
+                            <>
+                              <span style={{ display: "inline-block", width: "7px", height: "7px", borderRadius: "50%", background: "#EF4444" }}></span>
+                              ● LIVE BROADCASTING ON DASHBOARD
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={12} />
+                              ✓ PRIORLY CONDUCTED & ARCHIVED
+                            </>
+                          )}
+                        </span>
+
+                        <span style={{
+                          background: ev.effective_tier === "High" ? "rgba(185, 28, 28, 0.35)" : "rgba(217, 119, 6, 0.35)",
+                          color: ev.effective_tier === "High" ? "#FCA5A5" : "#FDE047",
+                          border: `1px solid ${ev.effective_tier === "High" ? "#B91C1C" : "#D97706"}`,
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontWeight: "700",
+                          fontSize: "0.72rem"
+                        }}>
+                          {ev.effective_tier || "High"} Impact Tier
+                        </span>
+
+                        <span style={{ fontSize: "0.72rem", color: "#94A3B8", fontFamily: "monospace" }}>
+                          ID: {ev.id}
+                        </span>
+                      </div>
+
+                      {/* Event Title */}
+                      <h4 style={{ margin: "0 0 6px", fontSize: "1.05rem", fontWeight: "800", color: "#F8FAFC" }}>
+                        {ev.title || ev.id}
+                      </h4>
+
+                      {/* Metadata row */}
+                      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                        <span>📍 <strong>Corridor:</strong> {ev.corridor} ({ev.police_station || "BTP Sector Command"})</span>
+                        <span>👥 <strong>Attendees:</strong> {(ev.crowd_size || 0).toLocaleString()}</span>
+                        <span>👮 <strong>Tactical Force:</strong> {ev.allocated_officers || 14} Officers</span>
+                        <span>🚧 <strong>Barricades:</strong> {ev.barricades ? ev.barricades.length : 0} Points</span>
+                        <span>🔄 <strong>Detour Routes:</strong> {ev.routes ? ev.routes.length : 0} Channels</span>
+                        {ev.road_closure && <span style={{ color: "#F87171", fontWeight: "700" }}>⛔ Road Closure Enacted</span>}
+                      </div>
+
+                      {/* Schedule info */}
+                      <div style={{ fontSize: "0.74rem", color: "#94A3B8", marginTop: "6px" }}>
+                        🕒 <strong>Schedule:</strong> {ev.start_datetime ? new Date(ev.start_datetime).toLocaleString() : "TBD"} → {ev.end_datetime ? new Date(ev.end_datetime).toLocaleString() : "TBD"}
+                        {ev.completed_at && (
+                          <span style={{ marginLeft: "12px", color: "#86EFAC" }}>
+                            • Concluded: {new Date(ev.completed_at).toLocaleString()} by {ev.concluded_by || "BTP Controller"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => setSelectedPlanModal(ev)}
+                        style={{
+                          background: "rgba(59, 130, 246, 0.18)",
+                          border: "1px solid rgba(59, 130, 246, 0.45)",
+                          color: "#93C5FD",
+                          padding: "7px 12px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: "700",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          cursor: "pointer"
+                        }}
+                        title="View complete tactical blueprint, manpower dispatch, barricades, and detour corridors"
+                      >
+                        <Eye size={14} /> Blueprint
+                      </button>
+
+                      {isLive && (
+                        <>
+                          <button
+                            onClick={() => handleConcludeDbEvent(ev)}
+                            disabled={concludingDbId === ev.id}
+                            style={{
+                              background: "rgba(16, 185, 129, 0.18)",
+                              border: "1px solid rgba(16, 185, 129, 0.45)",
+                              color: "#86EFAC",
+                              padding: "7px 12px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: "700",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              cursor: "pointer"
+                            }}
+                            title="Conclude event: closes live dashboard bulletin and registers into Priorly Conducted Events"
+                          >
+                            <CheckCircle2 size={14} /> {concludingDbId === ev.id ? "Concluding..." : "Conclude Event & Close Alert"}
+                          </button>
+
+                          <button
+                            onClick={() => navigate('/overview')}
+                            style={{
+                              background: "rgba(239, 68, 68, 0.18)",
+                              border: "1px solid rgba(239, 68, 68, 0.45)",
+                              color: "#FCA5A5",
+                              padding: "7px 12px",
+                              borderRadius: "6px",
+                              fontSize: "0.78rem",
+                              fontWeight: "700",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              cursor: "pointer"
+                            }}
+                            title="Open Overview Dashboard to view the live pulsing operations bulletin"
+                          >
+                            <ExternalLink size={14} /> Live on Dashboard ➔
+                          </button>
+                        </>
+                      )}
+
+                      <button
+                        onClick={() => handleDeleteDbEvent(ev.id)}
+                        style={{
+                          background: "rgba(239, 68, 68, 0.1)",
+                          border: "1px solid rgba(239, 68, 68, 0.25)",
+                          color: "#F87171",
+                          padding: "7px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          cursor: "pointer"
+                        }}
+                        title="Delete record from database"
+                      >
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          TACTICAL BLUEPRINT MODAL (IN-DEPTH EVENT & EXECUTION DETAILS)
+         ───────────────────────────────────────────────────────────── */}
+      {selectedPlanModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.8)",
+          backdropFilter: "blur(4px)",
+          zIndex: 3000,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#0F172A",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            borderRadius: "14px",
+            width: "100%",
+            maxWidth: "960px",
+            maxHeight: "90vh",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.8)",
+            overflow: "hidden"
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid var(--border-color)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "rgba(30, 41, 59, 0.5)"
+            }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{
+                    background: selectedPlanModal.status === "live" ? "rgba(239,68,68,0.25)" : "rgba(16,185,129,0.2)",
+                    color: selectedPlanModal.status === "live" ? "#FCA5A5" : "#86EFAC",
+                    border: `1px solid ${selectedPlanModal.status === "live" ? "#EF4444" : "#10B981"}`,
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontSize: "0.72rem",
+                    fontWeight: "800"
+                  }}>
+                    {selectedPlanModal.status === "live" ? "● LIVE OPERATION IN PROGRESS" : "✓ PRIORLY CONDUCTED EVENT"}
+                  </span>
+                  <span style={{ fontSize: "0.75rem", color: "#94A3B8", fontFamily: "monospace" }}>
+                    ID: {selectedPlanModal.id}
+                  </span>
+                </div>
+                <h3 style={{ margin: "6px 0 0", fontSize: "1.2rem", fontWeight: "800", color: "#F8FAFC" }}>
+                  {selectedPlanModal.title || selectedPlanModal.id}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedPlanModal(null)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "6px",
+                  borderRadius: "6px"
+                }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "22px" }}>
+              {/* 1. Key Metrics & Overview */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "14px",
+                background: "rgba(15, 23, 42, 0.6)",
+                padding: "16px",
+                borderRadius: "10px",
+                border: "1px solid var(--border-color)"
+              }}>
+                <div>
+                  <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>Corridor & Station</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#F1F5F9", marginTop: "2px" }}>
+                    {selectedPlanModal.corridor} ({selectedPlanModal.police_station || "BTP Sector"})
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>Attendees & Priority</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#FDE047", marginTop: "2px" }}>
+                    {(selectedPlanModal.crowd_size || 0).toLocaleString()} • {selectedPlanModal.priority || "High"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>Tactical Force Deployed</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#60A5FA", marginTop: "2px" }}>
+                    {selectedPlanModal.allocated_officers || 14} Officers • Buffer: {selectedPlanModal.buffer_radius || "1.5km"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.74rem", color: "#94A3B8" }}>Road Closure Requirement</div>
+                  <div style={{ fontSize: "0.9rem", fontWeight: "700", color: selectedPlanModal.road_closure ? "#F87171" : "#86EFAC", marginTop: "2px" }}>
+                    {selectedPlanModal.road_closure ? "Active Road Closure" : "Open with Phased Diversions"}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Manpower & Officer Deployment Matrix */}
+              <div>
+                <h4 style={{ margin: "0 0 10px", fontSize: "0.92rem", fontWeight: "700", color: "#93C5FD", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Shield size={16} /> Manpower & Officer Deployment Matrix
+                </h4>
+                {selectedPlanModal.allocations && selectedPlanModal.allocations.length > 0 ? (
+                  <div style={{ border: "1px solid var(--border-color)", borderRadius: "8px", overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                      <thead>
+                        <tr style={{ background: "rgba(30, 41, 59, 0.8)", borderBottom: "1px solid var(--border-color)", textAlign: "left", color: "#94A3B8" }}>
+                          <th style={{ padding: "10px 14px" }}>Junction</th>
+                          <th style={{ padding: "10px 14px" }}>Officers</th>
+                          <th style={{ padding: "10px 14px" }}>VMS Signs</th>
+                          <th style={{ padding: "10px 14px" }}>Barricades</th>
+                          <th style={{ padding: "10px 14px" }}>Deployment Role</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedPlanModal.allocations.map((a, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            <td style={{ padding: "10px 14px", fontWeight: "700", color: "#F1F5F9" }}>{a.junction}</td>
+                            <td style={{ padding: "10px 14px", color: "#60A5FA", fontWeight: "700" }}>{a.officers} Officers</td>
+                            <td style={{ padding: "10px 14px" }}>{a.vms_boards || 1} Units</td>
+                            <td style={{ padding: "10px 14px" }}>{a.barricades || 2} Points</td>
+                            <td style={{ padding: "10px 14px", color: "#CBD5E1" }}>{a.role}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.82rem", color: "#94A3B8", fontStyle: "italic" }}>
+                    Standard sector deployment active ({selectedPlanModal.allocated_officers || 14} officers across entry-points).
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Diversion Corridors & Detour Channels */}
+              <div>
+                <h4 style={{ margin: "0 0 10px", fontSize: "0.92rem", fontWeight: "700", color: "#F59E0B", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Navigation size={16} /> Diversion Corridors & Detour Routing
+                </h4>
+                {selectedPlanModal.routes && selectedPlanModal.routes.length > 0 ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "10px" }}>
+                    {selectedPlanModal.routes.map((r, idx) => (
+                      <div key={idx} style={{ background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: "8px", padding: "12px 14px" }}>
+                        <div style={{ fontWeight: "700", color: "#FDE047", fontSize: "0.85rem", marginBottom: "4px" }}>{r.corridor}</div>
+                        <div style={{ fontSize: "0.8rem", color: "#CBD5E1", lineHeight: "1.4" }}>{r.strategy}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.82rem", color: "#94A3B8", fontStyle: "italic" }}>Standard traffic bypass phased.</div>
+                )}
+              </div>
+
+              {/* 4. Barricades & Cordon Positions */}
+              <div>
+                <h4 style={{ margin: "0 0 10px", fontSize: "0.92rem", fontWeight: "700", color: "#F87171", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <AlertOctagon size={16} /> Barricade Cordon Coordinates ({selectedPlanModal.barricades ? selectedPlanModal.barricades.length : 0})
+                </h4>
+                {selectedPlanModal.barricades && selectedPlanModal.barricades.length > 0 ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "10px" }}>
+                    {selectedPlanModal.barricades.map((b, idx) => (
+                      <div key={idx} style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.25)", borderRadius: "8px", padding: "12px 14px" }}>
+                        <div style={{ fontWeight: "700", color: "#FCA5A5", fontSize: "0.85rem", marginBottom: "4px" }}>{b.name} ({b.road})</div>
+                        <div style={{ fontSize: "0.78rem", color: "#94A3B8" }}>Coordinates: {b.lat}, {b.lng}</div>
+                        <div style={{ fontSize: "0.78rem", color: "#CBD5E1", marginTop: "3px" }}>{b.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: "0.82rem", color: "#94A3B8", fontStyle: "italic" }}>No hard barricades deployed.</div>
+                )}
+              </div>
+
+              {/* 5. 72-Hour Tactical SOP Checklist */}
+              {selectedPlanModal.tactical_checklist && selectedPlanModal.tactical_checklist.length > 0 && (
+                <div>
+                  <h4 style={{ margin: "0 0 10px", fontSize: "0.92rem", fontWeight: "700", color: "#86EFAC", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <CheckCircle2 size={16} /> 72-Hour SOP Execution Checklist
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {selectedPlanModal.tactical_checklist.map((task, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.82rem", color: "#E2E8F0", background: "rgba(15, 23, 42, 0.5)", padding: "8px 12px", borderRadius: "6px" }}>
+                        <span style={{ color: "#34D399", fontWeight: "700" }}>✓</span>
+                        <span>{task}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 6. Citizen Broadcasts */}
+              {selectedPlanModal.broadcast_advisories && Object.keys(selectedPlanModal.broadcast_advisories).length > 0 && (
+                <div>
+                  <h4 style={{ margin: "0 0 10px", fontSize: "0.92rem", fontWeight: "700", color: "#60A5FA", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Share2 size={16} /> Public Communication & Traffic Advisories
+                  </h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "10px" }}>
+                    {selectedPlanModal.broadcast_advisories.whatsapp && (
+                      <div style={{ background: "rgba(37, 211, 102, 0.08)", border: "1px solid rgba(37, 211, 102, 0.25)", borderRadius: "8px", padding: "12px 14px" }}>
+                        <div style={{ fontWeight: "700", color: "#86EFAC", fontSize: "0.82rem", marginBottom: "4px" }}>💬 WhatsApp Broadcast</div>
+                        <div style={{ fontSize: "0.78rem", color: "#E2E8F0" }}>{selectedPlanModal.broadcast_advisories.whatsapp}</div>
+                      </div>
+                    )}
+                    {selectedPlanModal.broadcast_advisories.vms && (
+                      <div style={{ background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.25)", borderRadius: "8px", padding: "12px 14px" }}>
+                        <div style={{ fontWeight: "700", color: "#FDE047", fontSize: "0.82rem", marginBottom: "4px" }}>📟 VMS Highway Signs</div>
+                        <div style={{ fontSize: "0.78rem", color: "#E2E8F0", fontFamily: "monospace" }}>{selectedPlanModal.broadcast_advisories.vms}</div>
+                      </div>
+                    )}
+                    {selectedPlanModal.broadcast_advisories.twitter && (
+                      <div style={{ background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.25)", borderRadius: "8px", padding: "12px 14px" }}>
+                        <div style={{ fontWeight: "700", color: "#93C5FD", fontSize: "0.82rem", marginBottom: "4px" }}>🐦 Twitter / X Notification</div>
+                        <div style={{ fontSize: "0.78rem", color: "#E2E8F0" }}>{selectedPlanModal.broadcast_advisories.twitter}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: "16px 24px",
+              borderTop: "1px solid var(--border-color)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "rgba(30, 41, 59, 0.5)"
+            }}>
+              <div>
+                {selectedPlanModal.status === "completed" && (
+                  <span style={{ fontSize: "0.78rem", color: "#86EFAC" }}>
+                    ✓ Concluded at {new Date(selectedPlanModal.completed_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                {selectedPlanModal.status === "live" && (
+                  <>
+                    <button
+                      onClick={() => handleConcludeDbEvent(selectedPlanModal)}
+                      disabled={concludingDbId === selectedPlanModal.id}
+                      style={{
+                        background: "#10B981",
+                        border: "none",
+                        color: "#064E3B",
+                        padding: "8px 16px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        fontWeight: "700",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <CheckCircle2 size={15} /> {concludingDbId === selectedPlanModal.id ? "Concluding..." : "Conclude Event & Close Alert"}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedPlanModal(null);
+                        navigate('/overview');
+                      }}
+                      style={{
+                        background: "rgba(239, 68, 68, 0.2)",
+                        border: "1px solid rgba(239, 68, 68, 0.5)",
+                        color: "#FCA5A5",
+                        padding: "8px 14px",
+                        borderRadius: "6px",
+                        fontSize: "0.82rem",
+                        fontWeight: "700",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <ExternalLink size={14} /> Open Live on Dashboard ➔
+                    </button>
+                  </>
+                )}
+
+                <button
+                  onClick={() => setSelectedPlanModal(null)}
+                  className="btn-secondary"
+                  style={{ padding: "8px 16px", fontSize: "0.82rem" }}
+                >
+                  Close Blueprint
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           7. RIGHT-EDGE FLOATING TAB & SLIDE-OUT TEMPLATES DRAWER

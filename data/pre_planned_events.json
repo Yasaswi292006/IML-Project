@@ -1,5 +1,159 @@
 [
   {
+    "id": "PLN-2026-8173",
+    "title": "\ud83c\udfcf IPL T20 Cricket Match at M. Chinnaswamy Stadium with 35,000 spectators \u2014 CBD 2",
+    "event_type": "planned",
+    "event_cause": "public_event",
+    "description": "IPL T20 Cricket Match at M. Chinnaswamy Stadium with 35,000 spectators",
+    "corridor": "CBD 2",
+    "police_station": "Cubbon Park",
+    "junction": "QueensCircle",
+    "zone": "Central Zone 1",
+    "gba_identifier": "Bengaluru Central Corporation",
+    "address": "M. Chinnaswamy Stadium, MG Road, Bengaluru, Karnataka",
+    "latitude": 12.978835,
+    "longitude": 77.599537,
+    "endlatitude": 12.9815,
+    "endlongitude": 77.605,
+    "start_datetime": "2026-03-25T14:00:00",
+    "end_datetime": "2026-03-25T22:00:00",
+    "crowd_size": 35000,
+    "priority": "High",
+    "effective_tier": "High",
+    "road_closure": true,
+    "allocated_officers": 14,
+    "buffer_radius": "1.5 km Exclusion Cordon",
+    "barricades": [
+      {
+        "name": "QueensCircle",
+        "road": "Road leading to QueensCircle",
+        "lat": 12.9764,
+        "lng": 77.5978,
+        "reason": "Boundary intersection diversion point"
+      },
+      {
+        "name": "ShoolayCircle",
+        "road": "Road leading to ShoolayCircle",
+        "lat": 12.9664,
+        "lng": 77.6052,
+        "reason": "Boundary intersection diversion point"
+      }
+    ],
+    "routes": [
+      {
+        "route_id": 1,
+        "path": [
+          "QueensCircle",
+          "Majestic",
+          "ShoolayCircle"
+        ],
+        "path_coordinates": [
+          [
+            12.9764,
+            77.5978
+          ],
+          [
+            12.9779,
+            77.5724
+          ],
+          [
+            12.9664,
+            77.6052
+          ]
+        ],
+        "travel_time_min": 13.09,
+        "distance_m": 6540,
+        "congestion_index": 0.1,
+        "description": "Via Majestic"
+      },
+      {
+        "route_id": 2,
+        "path": [
+          "QueensCircle",
+          "Townhall",
+          "ShoolayCircle"
+        ],
+        "path_coordinates": [
+          [
+            12.9764,
+            77.5978
+          ],
+          [
+            12.9631,
+            77.5855
+          ],
+          [
+            12.9664,
+            77.6052
+          ]
+        ],
+        "travel_time_min": 10.31,
+        "distance_m": 4154,
+        "congestion_index": 0.2,
+        "description": "Via Townhall"
+      }
+    ],
+    "allocations": [],
+    "tactical_checklist": [],
+    "broadcast_advisories": {
+      "whatsapp": "\ud83d\udea8 *BTP PRE-EVENT TRAFFIC ADVISORY*\nEvent: IPL T20 Cricket Match at M. Chinnaswamy Stadium with 35,000 spectators\nCorridor: CBD 2 near QueensCircle\nExpected Crowd: 35,000\nClosure: Full Road Closure in effect\nDeployed Force: 30 Officers\nASTER Intelligence System",
+      "vms": "PLANNED EVENT ON CBD 2: USE RADIAL BYPASS",
+      "twitter": "\ud83d\udea8 Traffic Alert: Planned Public Event on CBD 2 on 2026-03-25. 30 officers deployed. Please follow diversions. #BlrTraffic #BTP"
+    },
+    "astram_record": {
+      "id": "PLN-2026-8173",
+      "event_type": "planned",
+      "latitude": 12.978835,
+      "longitude": 77.599537,
+      "endlatitude": 12.9815,
+      "endlongitude": 77.605,
+      "address": "M. Chinnaswamy Stadium, MG Road, Bengaluru, Karnataka",
+      "end_address": "Cubbon Road Parking & Brigade Road Junction, Bengaluru",
+      "event_cause": "public_event",
+      "requires_road_closure": true,
+      "start_datetime": "2026-03-25 14:00:00+00:00",
+      "end_datetime": "2026-03-25 22:00:00+00:00",
+      "status": "scheduled",
+      "authenticated": "yes",
+      "modified_datetime": "2026-11-13T18:49:35.916617+00:00",
+      "map_file": "route_chinnaswamy_ipl.geojson",
+      "direction": "Both",
+      "description": "IPL T20 Cricket Match at M. Chinnaswamy Stadium with 35,000 spectators",
+      "veh_type": "bmtc_bus",
+      "veh_no": "KA-01-F-9901 (BMTC Special Shuttle)",
+      "corridor": "CBD 2",
+      "priority": "High",
+      "cargo_material": "Event Stage Logistics & Cordon Equipment",
+      "reason_breakdown": "N/A",
+      "age_of_truck": "",
+      "created_date": "2026-11-13T18:49:35.916617+00:00",
+      "route_path": "[12.9788, 77.5995] -> [12.9815, 77.6050]",
+      "client_id": 1,
+      "created_by_id": "BTP_PLANNER_01",
+      "last_modified_by_id": "BTP_PLANNER_01",
+      "assigned_to_police_id": "SECTOR_COMMAND_01",
+      "citizen_accident_id": "N/A",
+      "comment": "Erect pedestrian cordons along Queen's Road and deploy radial shuttle feeder buses from MG Road Metro.",
+      "police_station": "Cubbon Park",
+      "meta_data": "{\"crowd_size\": 35000, \"buffer_radius_m\": 1500}",
+      "kgid": "FKKG000008",
+      "resolved_at_address": "M. Chinnaswamy Stadium, MG Road, Bengaluru, Karnataka",
+      "resolved_at_latitude": 12.978835,
+      "resolved_at_longitude": 77.599537,
+      "closed_by_id": "",
+      "closed_datetime": "",
+      "resolved_by_id": "",
+      "resolved_datetime": "",
+      "gba_identifier": "Bengaluru Central Corporation",
+      "zone": "Central Zone 1",
+      "junction": "QueensCircle"
+    },
+    "status": "live",
+    "created_at": "2026-11-14T00:19:45.718040",
+    "completed_at": null,
+    "concluded_by": null
+  },
+  {
     "id": "ASTRAM-PLAN-IPL-2026",
     "title": "\ud83c\udfcf IPL T20 Cricket Match \u2014 M. Chinnaswamy Stadium",
     "event_type": "IPL Cricket Match",
