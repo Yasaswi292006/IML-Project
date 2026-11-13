@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   AlertCircle, Shield, Navigation, Users, Share2, CheckCircle2,
   ChevronRight, Copy, MapPin, Calendar, Clock, AlertTriangle, RotateCcw,
-  Sparkles, Layers, ArrowRight, Activity, Zap, Check, Compass, Sliders
+  Sparkles, Layers, ArrowRight, Activity, Zap, Check, Compass, Sliders,
+  Minimize2, Maximize2
 } from 'lucide-react';
 import GoogleMapComponent from './GoogleMapComponent';
 
@@ -189,6 +190,7 @@ export default function PredictTab({ config, apiKey }) {
   const [mapSyncLoading, setMapSyncLoading] = useState(false);
   const [syncedNotification, setSyncedNotification] = useState(null);
   const [showSchemaBreakdown, setShowSchemaBreakdown] = useState(false);
+  const [mapCollapsed, setMapCollapsed] = useState(false);
 
   // When corridor changes, populate smart defaults from dataset metadata
   const handleCorridorChange = (newCorridor) => {
@@ -667,7 +669,7 @@ export default function PredictTab({ config, apiKey }) {
       )}
 
       {/* Main 2-Column Command Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: "24px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 420px) minmax(0, 1fr)", gap: "24px", alignItems: "start" }}>
 
         {/* LEFT COLUMN: All Required Dataset Fields Form */}
         <div className="metric-card" style={{ padding: "20px" }}>
@@ -969,11 +971,11 @@ export default function PredictTab({ config, apiKey }) {
           </button>
         </div>
 
-        {/* RIGHT COLUMN: Fixed Google Maps + Comprehensive Results Canvas */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* RIGHT COLUMN: Google Maps & Comprehensive Results Canvas */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
 
-          {/* PERMANENT FIXED GOOGLE MAP */}
-          <div className="map-card-container" style={{ position: "sticky", top: "16px", zIndex: 10 }}>
+          {/* TACTICAL GOOGLE MAP (In-Flow, Never Hovering) */}
+          <div className="map-card-container" style={{ position: "relative", zIndex: 1, marginBottom: 0 }}>
             <div className="map-header">
               <div className="map-header-title">
                 <Navigation size={18} color="#60A5FA" />
@@ -983,30 +985,81 @@ export default function PredictTab({ config, apiKey }) {
                   {result?.nearest_junction && ` (Junction: ${result.nearest_junction})`}
                 </span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.78rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.78rem", flexWrap: "wrap" }}>
                 <span style={{ background: "rgba(59,130,246,0.15)", color: "#93C5FD", padding: "3px 8px", borderRadius: "4px" }}>
                   📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                 </span>
                 <span style={{ color: mapSyncLoading ? "#F59E0B" : "#38BDF8", fontWeight: "600" }}>
                   {mapSyncLoading ? "⚡ Syncing form..." : "✨ Click map to auto-fill form"}
                 </span>
+                <button
+                  onClick={() => setMapCollapsed(prev => !prev)}
+                  style={{
+                    background: mapCollapsed ? "rgba(59, 130, 246, 0.25)" : "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(59, 130, 246, 0.4)",
+                    color: mapCollapsed ? "#60A5FA" : "var(--text-secondary)",
+                    borderRadius: "6px",
+                    padding: "4px 10px",
+                    fontSize: "0.74rem",
+                    fontWeight: "600",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    cursor: "pointer"
+                  }}
+                  title={mapCollapsed ? "Expand Tactical Map" : "Collapse Tactical Map to see full results below"}
+                >
+                  {mapCollapsed ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                  {mapCollapsed ? "Expand Map" : "Collapse Map"}
+                </button>
               </div>
             </div>
 
-            <GoogleMapComponent
-              apiKey={apiKey}
-              incident={{
-                lat: parseFloat(lat),
-                lng: parseFloat(lng),
-                tier: result?.predicted_tier || null
-              }}
-              barricades={result?.barricades || []}
-              routes={result?.routes || []}
-              allocations={result?.allocations || []}
-              mode="tactical"
-              height="440px"
-              onLocationSelect={handleLocationSelect}
-            />
+            {!mapCollapsed ? (
+              <GoogleMapComponent
+                apiKey={apiKey}
+                incident={{
+                  lat: parseFloat(lat),
+                  lng: parseFloat(lng),
+                  tier: result?.predicted_tier || null
+                }}
+                barricades={result?.barricades || []}
+                routes={result?.routes || []}
+                allocations={result?.allocations || []}
+                mode="tactical"
+                height="420px"
+                onLocationSelect={handleLocationSelect}
+              />
+            ) : (
+              <div style={{
+                padding: "14px 20px",
+                background: "rgba(15, 23, 42, 0.6)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                fontSize: "0.82rem",
+                color: "var(--text-muted)"
+              }}>
+                <span>
+                  Tactical map collapsed. Full screen dedicated to predicted results below.
+                </span>
+                <button
+                  onClick={() => setMapCollapsed(false)}
+                  style={{
+                    background: "rgba(59, 130, 246, 0.2)",
+                    border: "1px solid rgba(59, 130, 246, 0.4)",
+                    color: "#93C5FD",
+                    padding: "4px 12px",
+                    borderRadius: "6px",
+                    fontSize: "0.76rem",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
+                >
+                  Expand Map
+                </button>
+              </div>
+            )}
           </div>
 
           {/* BELOW MAP: Real-Time AI Results or Readiness Guide */}
