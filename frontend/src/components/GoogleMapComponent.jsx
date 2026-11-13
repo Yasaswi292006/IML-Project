@@ -389,7 +389,42 @@ export default function GoogleMapComponent({
       });
       newObjects.push(circle);
 
-      // 2. Center Pinpoint Location Marker (every circle gets its exact pinpoint)
+      // 2. Linear Corridor Span (for events with different start & end coordinates)
+      const hasLinearSpan = ev.endlat && ev.endlng && (Math.abs(ev.endlat - ev.lat) > 0.0001 || Math.abs(ev.endlng - ev.lng) > 0.0001);
+      if (hasLinearSpan) {
+        const spanLine = new window.google.maps.Polyline({
+          path: [
+            { lat: ev.lat, lng: ev.lng },
+            { lat: ev.endlat, lng: ev.endlng }
+          ],
+          geodesic: true,
+          strokeColor: strokeColor,
+          strokeOpacity: 0.85,
+          strokeWeight: 3.5,
+          zIndex: zIndexVal,
+          map: mapInstance
+        });
+        newObjects.push(spanLine);
+
+        // Terminus / Queue Tail Pin
+        const endMarker = new window.google.maps.Marker({
+          position: { lat: ev.endlat, lng: ev.endlng },
+          map: mapInstance,
+          zIndex: zIndexVal,
+          title: `[Tail] ${ev.corridor}`,
+          icon: {
+            path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            scale: 3,
+            fillColor: color,
+            fillOpacity: 0.9,
+            strokeColor: pinBorder,
+            strokeWeight: 1.5
+          }
+        });
+        newObjects.push(endMarker);
+      }
+
+      // 3. Center Pinpoint Location Marker (every circle gets its exact pinpoint)
       const marker = new window.google.maps.Marker({
         position: { lat: ev.lat, lng: ev.lng },
         map: mapInstance,
@@ -418,6 +453,7 @@ export default function GoogleMapComponent({
             </div>
             <div style="font-size:0.8rem;line-height:1.5;">
               <b>Corridor:</b> ${ev.corridor}<br>
+              ${hasLinearSpan ? `<b>Corridor Span:</b> ${ev.lat.toFixed(4)}, ${ev.lng.toFixed(4)} ➔ ${ev.endlat.toFixed(4)}, ${ev.endlng.toFixed(4)}<br>` : ''}
               <b>Estimated Clearance:</b> ${ev.duration} mins<br>
               ${ev.requires_closure ? '<span style="color:#EF4444;font-weight:bold;">⚠️ Road Closure Active</span>' : '<span style="color:#86EFAC;">Road Open</span>'}
             </div>

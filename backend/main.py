@@ -463,10 +463,15 @@ def get_events(
     items = []
     for _, r in filtered.iterrows():
         dur = float(r.get("duration_minutes", 60)) if pd.notna(r.get("duration_minutes")) else 60.0
+        end_lat_val = float(r["endlatitude"]) if pd.notna(r.get("endlatitude")) and float(r.get("endlatitude", 0)) != 0 else None
+        end_lng_val = float(r["endlongitude"]) if pd.notna(r.get("endlongitude")) and float(r.get("endlongitude", 0)) != 0 else None
+
         items.append({
             "id": str(r.get("id", "")),
             "lat": float(r["latitude"]),
             "lng": float(r["longitude"]),
+            "endlat": end_lat_val,
+            "endlng": end_lng_val,
             "cause": str(r.get("event_cause", "incident")).replace("_", " ").title(),
             "corridor": str(r.get("corridor", "Corridor")),
             "tier": str(r.get("impact_tier", "Medium")),
